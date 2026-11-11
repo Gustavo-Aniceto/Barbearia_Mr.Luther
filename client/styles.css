@@ -542,3 +542,9 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .kpis { gap: 0; background: var(--white); }
 .kpi { box-shadow: 1px 1px 0 var(--line); }
 .first-cap::first-letter { text-transform: uppercase; }
+
+/* Painel do barbeiro: Meus ganhos */
+.app .chip { border-color: var(--line); color: var(--ink, #111); }
+.app .chip[aria-pressed='true'], .app .chip:hover { background: var(--moss); color: var(--paper); border-color: var(--moss); }
+.earn-hero { display: grid; gap: 6px; }
+.earn-total { font-size: clamp(34px, 7vw, 52px); font-stretch: 112%; font-variant-numeric: tabular-nums; line-height: 1.05; color: var(--moss-deep); }

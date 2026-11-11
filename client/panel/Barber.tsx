@@ -8,14 +8,14 @@ import { PanelLayout, RequireStaff, NavItem } from './Layout';
 
 const NAV: NavItem[] = [
   { to: '/barbeiro', label: 'Hoje', icon: 'clock' }, { to: '/barbeiro/agenda', label: 'Minha agenda', icon: 'calendar' },
-  { to: '/barbeiro/disponibilidade', label: 'Disponibilidade', icon: 'settings' }, { to: '/barbeiro/comissoes', label: 'Comissões', icon: 'wallet' },
+  { to: '/barbeiro/disponibilidade', label: 'Disponibilidade', icon: 'settings' }, { to: '/barbeiro/comissoes', label: 'Meus ganhos', icon: 'wallet' },
   { to: '/barbeiro/historico', label: 'Histórico', icon: 'log' },
 ];
 
 export function BarberApp() {
   const path = usePath();
   const page = path.replace('/barbeiro', '').replace(/^\//, '') || 'hoje';
-  const titles: Record<string, string> = { hoje: 'Hoje', agenda: 'Minha agenda', disponibilidade: 'Disponibilidade', comissoes: 'Comissões e desempenho', historico: 'Histórico de atendimentos' };
+  const titles: Record<string, string> = { hoje: 'Hoje', agenda: 'Minha agenda', disponibilidade: 'Disponibilidade', comissoes: 'Meus ganhos', historico: 'Histórico de atendimentos' };
   return (
     <RequireStaff barber>
       <PanelLayout nav={NAV} title={titles[page] || 'Painel'} subtitle="Painel do barbeiro">
@@ -156,30 +156,85 @@ function RequestOff({ onClose, onDone }: { onClose: () => void; onDone: () => vo
   );
 }
 
+// "Meus ganhos": quanto o barbeiro tem a receber, de onde vem e o que já foi repassado (dados só dele).
+type Earnings = {
+  regra: { tipo: 'percentual' | 'fixo'; valor: number; produto_percentual: number; definida: boolean };
+  a_receber: { total: number; servicos: number; produtos: number; desde: string | null };
+  periodo: { atendimentos: number; faltas: number; valor_servicos: number; comissao_servicos: number; comissao_produtos: number; recebido: number };
+  top_servicos: { nome: string; qtd: number; valor: number }[];
+  lancamentos: { id: string; data: string; origem: 'servico' | 'produto'; descricao: string; base: number; tipo: string; taxa: number; valor: number; status: string; atendimento_em: string | null; cliente: string; servicos: string | null }[];
+  repasses: { pago_em: string; valor: number; inicio: string; fim: string; obs: string | null; itens: number }[];
+};
+
+function periodFor(kind: string, today: string): [string, string] {
+  const dow = (new Date(today + 'T12:00:00Z').getUTCDay() + 6) % 7; // segunda = 0
+  if (kind === 'hoje') return [today, today];
+  if (kind === 'semana') return [addDays(today, -dow), today];
+  if (kind === 'mes_passado') { const first = today.slice(0, 8) + '01'; const last = addDays(first, -1); return [last.slice(0, 8) + '01', last]; }
+  return [today.slice(0, 8) + '01', today];
+}
+
 function Commissions() {
-  const [from, setFrom] = useState(isoDay().slice(0, 8) + '01');
-  const [to, setTo] = useState(isoDay());
-  const m = useLoad(() => db.rpc<any>('my_barber_metrics', { p_from: from, p_to: to }), [from, to]);
-  const list = useLoad(() => db.select('commissions', { created_at: `gte.${spToIso(from, '00:00')}` }, { order: 'created_at.desc', limit: 200 }), [from]);
-  const rows = (list.data || []).filter((c: any) => c.created_at < spToIso(addDays(to, 1), '00:00'));
+  const today = isoDay();
+  const [kind, setKind] = useState('mes');
+  const [range, setRange] = useState<[string, string]>(() => periodFor('mes', today));
+  const pick = (k: string) => { setKind(k); if (k !== 'outro') setRange(periodFor(k, today)); };
+  const e = useLoad(() => db.rpc<Earnings>('my_earnings', { p_from: range[0], p_to: range[1] }), [range[0], range[1]]);
+  const regra = (r: Earnings['regra']) => `${r.tipo === 'percentual' ? `${Number(r.valor)}% de cada serviço` : `${money(r.valor)} por serviço`}${Number(r.produto_percentual) > 0 ? ` · ${Number(r.produto_percentual)}% das vendas de produtos` : ''}`;
+  const d = e.data;
   return (
     <>
-      <div className="toolbar"><Field label="De"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field><Field label="Até"><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></Field></div>
-      {m.data && <div className="kpis">
-        <div className="kpi hero-kpi"><span>Comissão no período</span><strong>{money(m.data.comissao_periodo)}</strong></div>
-        <div className="kpi"><span>A receber (total)</span><strong>{money(m.data.comissao_pendente)}</strong></div>
-        <div className="kpi"><span>Pago no período</span><strong>{money(m.data.comissao_paga)}</strong></div>
-        <div className="kpi"><span>Atendimentos</span><strong>{m.data.atendimentos}</strong><small>{money(m.data.receita_gerada)} gerados</small></div>
-        <div className="kpi"><span>Faltas de clientes</span><strong>{m.data.faltas}</strong></div>
-      </div>}
-      <section className="card">
-        <h2 style={{ fontSize: 15.5, marginBottom: 10 }}>Lançamentos</h2>
-        {list.loading ? <Loading /> : rows.length === 0 ? <Empty title="Sem comissões no período" /> : (
-          <div className="table-wrap"><table className="table"><thead><tr><th>Data</th><th>Origem</th><th className="num">Base</th><th>Regra</th><th className="num">Comissão</th><th>Status</th></tr></thead>
-            <tbody>{rows.map((c: any) => <tr key={c.id}><td>{fmtDate(c.created_at)}</td><td>{c.description} <span className="cell-sub">({c.source})</span></td><td className="num">{money(c.base_amount)}</td>
-              <td>{c.rate_type === 'percentual' ? `${Number(c.rate_value)}%` : money(c.rate_value)}</td><td className="num cell-strong">{money(c.amount)}</td><td><Badge tone={c.status === 'pago' ? 'ok' : c.status === 'pendente' ? 'warn' : 'muted'}>{c.status}</Badge></td></tr>)}</tbody></table></div>
-        )}
-      </section>
+      <div className="toolbar" role="group" aria-label="Período">
+        {[['hoje', 'Hoje'], ['semana', 'Esta semana'], ['mes', 'Este mês'], ['mes_passado', 'Mês passado'], ['outro', 'Outro período']].map(([k, l]) =>
+          <button key={k} className="chip" aria-pressed={kind === k} onClick={() => pick(k)}>{l}</button>)}
+        {kind === 'outro' && <>
+          <Field label="De"><Input type="date" value={range[0]} max={range[1]} onChange={(ev) => setRange([ev.target.value, range[1]])} /></Field>
+          <Field label="Até"><Input type="date" value={range[1]} min={range[0]} onChange={(ev) => setRange([range[0], ev.target.value])} /></Field>
+        </>}
+      </div>
+      {e.loading ? <Loading /> : e.error ? <ErrorBox error={e.error} onRetry={e.reload} /> : d && (<>
+        {!d.regra.definida && <div className="notice warn"><span>Sua comissão ainda não foi definida pela barbearia. Os valores aparecem aqui assim que ela for configurada.</span></div>}
+        <section className="card earn-hero">
+          <span className="muted">Você tem a receber</span>
+          <strong className="earn-total">{money(d.a_receber.total)}</strong>
+          <span className="cell-sub">
+            Serviços {money(d.a_receber.servicos)} · Produtos {money(d.a_receber.produtos)}
+            {d.a_receber.desde ? ` · acumulado desde ${fmtDate(d.a_receber.desde)}` : ''}
+          </span>
+          {d.regra.definida && <span className="cell-sub">Sua regra: {regra(d.regra)}</span>}
+        </section>
+        <div className="kpis">
+          <div className="kpi hero-kpi"><span>Sua comissão no período</span><strong>{money(Number(d.periodo.comissao_servicos) + Number(d.periodo.comissao_produtos))}</strong>
+            <small>Serviços {money(d.periodo.comissao_servicos)} · Produtos {money(d.periodo.comissao_produtos)}</small></div>
+          <div className="kpi"><span>Atendimentos finalizados</span><strong>{d.periodo.atendimentos}</strong><small>{money(d.periodo.valor_servicos)} em serviços</small></div>
+          <div className="kpi"><span>Recebido no período</span><strong>{money(d.periodo.recebido)}</strong></div>
+          <div className="kpi"><span>Faltas de clientes</span><strong>{d.periodo.faltas}</strong></div>
+        </div>
+        {d.top_servicos.length > 0 && <section className="card">
+          <h2 style={{ fontSize: 15.5, marginBottom: 10 }}>Serviços que você mais fez</h2>
+          <ul className="list-plain">{d.top_servicos.map((t) => <li key={t.nome}><span>{t.nome}</span><span className="cell-sub">{t.qtd}× · {money(t.valor)}</span></li>)}</ul>
+        </section>}
+        <section className="card">
+          <h2 style={{ fontSize: 15.5, marginBottom: 10 }}>De onde vem o seu dinheiro</h2>
+          {d.lancamentos.length === 0 ? <Empty title="Nada no período" text="Cada atendimento finalizado e cada produto que você vender aparece aqui com o cálculo da sua parte." /> : (
+            <div className="table-wrap"><table className="table"><thead><tr><th>Data</th><th>Cliente</th><th>O quê</th><th className="num">Valor</th><th>Regra</th><th className="num">Sua parte</th><th>Situação</th></tr></thead>
+              <tbody>{d.lancamentos.map((l) => <tr key={l.id}>
+                <td>{fmtDate(l.atendimento_em || l.data)}</td><td>{l.cliente || '–'}</td>
+                <td>{l.servicos || l.descricao} {l.origem === 'produto' && <Badge>produto</Badge>}</td>
+                <td className="num">{money(l.base)}</td><td>{l.tipo === 'percentual' ? `${Number(l.taxa)}%` : money(l.taxa)}</td>
+                <td className="num cell-strong">{money(l.valor)}</td>
+                <td><Badge tone={l.status === 'pago' ? 'ok' : 'warn'}>{l.status === 'pago' ? 'Pago' : 'A receber'}</Badge></td></tr>)}</tbody></table></div>
+          )}
+        </section>
+        <section className="card">
+          <h2 style={{ fontSize: 15.5, marginBottom: 10 }}>Repasses recebidos</h2>
+          {d.repasses.length === 0 ? <p className="muted">Nenhum repasse registrado ainda. Quando a barbearia pagar suas comissões, o pagamento aparece aqui.</p> : (
+            <ul className="list-plain">{d.repasses.map((r) => <li key={r.pago_em}>
+              <span><strong>{money(r.valor)}</strong> <span className="cell-sub">em {fmtDate(r.pago_em)} · {r.itens} {r.itens === 1 ? 'lançamento' : 'lançamentos'} · até {fmtDate(r.fim + 'T12:00:00')}{r.obs ? ` · ${r.obs}` : ''}</span></span>
+            </li>)}</ul>
+          )}
+        </section>
+      </>)}
     </>
   );
 }
