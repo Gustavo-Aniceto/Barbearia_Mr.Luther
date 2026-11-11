@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { AuthProvider, usePath } from './lib/core';
 import { ConfirmProvider, ToastProvider } from './lib/ui';
 import { CartProvider, SiteProvider } from './site/data';
+import { InstallProvider } from './lib/install';
 import { Home } from './site/Home';
 import { Booking } from './site/Booking';
 import { AuthPage, Cart, ChangePassword, ClubLanding, Legal, NotFound, PrivacyCenter, Shop } from './site/Pages';
@@ -74,7 +75,9 @@ export default function ClientApp() {
         <AuthProvider>
           <SiteProvider>
             <CartProvider>
-              <Router />
+              <InstallProvider>
+                <Router />
+              </InstallProvider>
             </CartProvider>
           </SiteProvider>
         </AuthProvider>

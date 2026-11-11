@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../lib/api';
 import { Link, navigate, useAuth, usePath } from '../lib/core';
 import { Button, Empty, Field, Icon, ImageInput, Input, Loading, Logo, Modal, MoneyInput, Select, Textarea, Toggle, useToast } from '../lib/ui';
+import { InstallLink } from '../lib/install';
 
 export type NavItem = { to: string; label: string; icon: string; perm?: string; group?: string; short?: string };
 
@@ -31,6 +32,7 @@ export function PanelLayout({ nav, title, actions, children, subtitle, tabs }: {
           <span style={{ color: 'rgba(244,242,236,.55)' }}>{session?.user.email}</span>
           {access?.roles.includes('barbeiro') && path.startsWith('/admin') && <Link to="/barbeiro"><Icon name="scissors" size={15} />Meu painel de barbeiro</Link>}
           {path.startsWith('/barbeiro') && access && access.roles.some((r) => !['barbeiro', 'cliente', 'afiliado'].includes(r)) && <Link to="/admin"><Icon name="chart" size={15} />Painel administrativo</Link>}
+          <InstallLink />
           <Link to="/"><Icon name="arrowLeft" size={15} />Ver o site</Link>
           <button onClick={() => signOut().then(() => navigate('/'))}><Icon name="logout" size={15} />Sair</button>
         </div>
