@@ -583,6 +583,10 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 
   /* Agendamento: total + Continuar sempre visíveis no rodapé da tela */
   .steps li { min-width: 0; font-size: 12.5px; }
+  /* No celular só a etapa atual mostra o nome; as demais mostram o número (o nome continua para leitores de tela) */
+  .steps li:not(.current) { font-size: 0; }
+  .steps li:not(.current)::before { font-size: 12.5px; content: counter(step); }
+  .steps li.current { flex: 3; }
   .booking .summary { position: sticky; bottom: 0; top: auto; z-index: 30; margin: 0 -20px; border-radius: 18px 18px 0 0;
     padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); gap: 10px; grid-template-columns: 1fr 1fr; box-shadow: 0 -8px 24px rgba(0,0,0,.18); }
   .booking .summary h2, .booking .summary dl, .booking .summary .muted { display: none; }
