@@ -187,7 +187,7 @@ function Services() {
                     {s.barber_ids.length > 0 && <>Com {s.barber_ids.map(barberName).filter(Boolean).join(', ')}.</>}
                   </p>
                 </div>
-                <div className="price-value">{money(s.price)}<small>{duration(s.duration_minutes)}</small></div>
+                <div className="price-value">{s.price_is_minimum && <small className="price-from">a partir de</small>}{money(s.price)}<small>{duration(s.duration_minutes)}</small></div>
                 {s.bookable_online && s.barber_ids.length > 0
                   ? <Link to={`/agendar?servico=${s.id}`} className="btn btn-line btn-sm">Agendar</Link>
                   : <span className="price-meta">Agende pelo WhatsApp</span>}

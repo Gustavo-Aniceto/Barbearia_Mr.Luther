@@ -32,6 +32,7 @@ export function Booking() {
   const services = site?.services.filter((s) => s.bookable_online && s.barber_ids.length) || [];
   const chosen = services.filter((s) => selected.includes(s.id));
   const total = chosen.reduce((a, s) => a + Number(s.price), 0);
+  const totalIsMinimum = chosen.some((s) => s.price_is_minimum);
   const minutes = chosen.reduce((a, s) => a + s.duration_minutes, 0);
   const eligibleBarbers = (site?.barbers || []).filter((b) => b.accepts_online_booking && chosen.every((s) => b.service_ids.includes(s.id)));
   const planCovers = subs.some((s) => s.benefits.some((b: any) => selected.includes(b.service_id) && (b.quantity == null || b.used < b.quantity)));
@@ -124,7 +125,7 @@ export function Booking() {
                     <button key={s.id} className="opt" aria-pressed={selected.includes(s.id)} onClick={() => toggle(s.id)}>
                       <span className="opt-check"><Icon name="check" size={14} /></span>
                       <span><span className="opt-title">{s.name}</span><br /><span className="opt-sub">{duration(s.duration_minutes)}{s.description ? ` · ${s.description}` : ''}</span></span>
-                      <span className="opt-right">{money(s.price)}</span>
+                      <span className="opt-right">{s.price_is_minimum ? `a partir de ${money(s.price)}` : money(s.price)}</span>
                     </button>
                   ))}
                 </div>
@@ -195,7 +196,7 @@ export function Booking() {
               {step >= 1 && <div><dt>Profissional</dt><dd>{slot?.barber_name || eligibleBarbers.find((b) => b.id === barber)?.name || 'Qualquer disponível'}</dd></div>}
               {slot && <div><dt>Data e horário</dt><dd>{fmtLongDate(slot.starts_at)}, {fmtTime(slot.starts_at)}</dd></div>}
             </dl>
-            <div className="summary-total"><span>Total</span><strong>{usePlan && planCovers ? 'Plano' : money(total)}</strong></div>
+            <div className="summary-total"><span>Total</span><strong>{usePlan && planCovers ? 'Plano' : `${totalIsMinimum ? 'a partir de ' : ''}${money(total)}`}</strong></div>
             {step < 3 ? (
               <Button variant="light" size="lg" disabled={(step === 0 && !chosen.length) || (step === 2 && !slot) || (step === 1 && eligibleBarbers.length === 0)} onClick={() => setStep(step + 1)}>Continuar</Button>
             ) : (

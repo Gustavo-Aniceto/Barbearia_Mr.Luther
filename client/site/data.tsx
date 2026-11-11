@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { db } from '../lib/api';
 
-export type Service = { id: string; name: string; description: string | null; photo_url: string | null; price: number; duration_minutes: number; category_id: string | null; is_combo: boolean; bookable_online: boolean; barber_ids: string[] };
+export type Service = { id: string; name: string; description: string | null; photo_url: string | null; price: number; price_is_minimum?: boolean; duration_minutes: number; category_id: string | null; is_combo: boolean; bookable_online: boolean; barber_ids: string[] };
 export type Barber = { id: string; name: string; bio: string | null; specialties: string[]; photo_url: string | null; accepts_online_booking: boolean; service_ids: string[] };
 export type Product = { id: string; name: string; description: string | null; photo_url: string | null; price: number; category_id: string | null; track_stock: boolean; stock: number | null; available: boolean };
 export type Plan = { id: string; name: string; description: string | null; price: number; period_months: number; product_discount_percent: number; usage_rules: string | null; contract_conditions: string | null; sold_out: boolean; benefits: { description: string; quantity: number | null; service_id: string | null }[] };

@@ -34,7 +34,7 @@ export function Services() {
               const bl = (links.data || []).filter((l: any) => l.service_id === s.id);
               return (
                 <tr key={s.id}><td><div className="cell-strong">{s.name}{s.is_combo && <> <Badge tone="info">Combo</Badge></>}{!s.active && <> <Badge>Inativo</Badge></>}</div><div className="cell-sub">{catName(s.category_id)}{s.is_combo && ` · inclui ${(combos.data || []).filter((c: any) => c.combo_id === s.id).map((c: any) => svcs.data!.find((x: any) => x.id === c.service_id)?.name).join(', ')}`}</div></td>
-                  <td className="num">{money(s.price)}</td><td className="num">{duration(s.duration_minutes)}{s.extra_buffer_minutes > 0 && <div className="cell-sub">+{s.extra_buffer_minutes} min intervalo</div>}</td>
+                  <td className="num">{s.price_is_minimum && <div className="cell-sub">a partir de</div>}{money(s.price)}</td><td className="num">{duration(s.duration_minutes)}{s.extra_buffer_minutes > 0 && <div className="cell-sub">+{s.extra_buffer_minutes} min intervalo</div>}</td>
                   <td>{bl.length ? bl.map((l: any) => barbers.data?.find((b: any) => b.id === l.barber_id)?.display_name).filter(Boolean).join(', ') : <span className="field-error">Nenhum vinculado</span>}</td>
                   <td>{s.bookable_online && s.active ? <Badge tone="ok">Sim</Badge> : <Badge>Não</Badge>}</td>
                   <td className="actions">{can('servicos.editar') && <><Button size="sm" variant="ghost" onClick={() => setLinkFor(s)}>Profissionais</Button><Button size="sm" variant="ghost" onClick={() => setEdit(s)}>Editar</Button></>}</td></tr>
@@ -45,7 +45,7 @@ export function Services() {
       <EntityModal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Editar serviço' : 'Novo serviço'} initial={{ ...(edit || {}), combo_items: (combos.data || []).filter((c: any) => c.combo_id === edit?.id).map((c: any) => c.service_id) }}
         fields={[
           { key: 'name', label: 'Nome', required: true }, { key: 'category_id', label: 'Categoria', type: 'select', options: (cats.data || []).map((c: any) => ({ value: c.id, label: c.name })) },
-          { key: 'price', label: 'Preço', type: 'money', required: true, min: 0 }, { key: 'duration_minutes', label: 'Duração (minutos)', type: 'number', required: true, min: 5, max: 480 },
+          { key: 'price', label: 'Preço', type: 'money', required: true, min: 0 }, { key: 'price_is_minimum', label: 'Preço "a partir de" (valor final definido no atendimento)', type: 'toggle' }, { key: 'duration_minutes', label: 'Duração (minutos)', type: 'number', required: true, min: 5, max: 480 },
           { key: 'extra_buffer_minutes', label: 'Intervalo adicional após (min)', type: 'number', min: 0, max: 120, hint: 'Tempo de preparo/limpeza bloqueado na agenda' },
           { key: 'sort_order', label: 'Ordem de exibição', type: 'number' },
           { key: 'description', label: 'Descrição', type: 'textarea' }, { key: 'photo_url', label: 'Fotografia (opcional)', type: 'image', folder: 'servicos' },
@@ -62,7 +62,7 @@ export function Services() {
           try { await db.remove('services', { id: edit.id }); toast.ok('Serviço excluído'); setEdit(null); svcs.reload(); } catch (e) { toast.error((e as Error).message); }
         }}>Excluir</Button> : undefined}
         onSave={async (v) => {
-          const row = { name: v.name, category_id: v.category_id || null, price: v.price, duration_minutes: v.duration_minutes, extra_buffer_minutes: v.extra_buffer_minutes ?? 0, sort_order: v.sort_order ?? 0,
+          const row = { name: v.name, category_id: v.category_id || null, price: v.price, price_is_minimum: !!v.price_is_minimum, duration_minutes: v.duration_minutes, extra_buffer_minutes: v.extra_buffer_minutes ?? 0, sort_order: v.sort_order ?? 0,
             description: v.description || null, photo_url: v.photo_url || null, active: !!v.active, bookable_online: !!v.bookable_online, is_combo: !!v.is_combo };
           const saved = edit.id ? (await db.update('services', { id: edit.id }, row))[0] : await db.insert('services', row);
           if (edit.id) await db.remove('service_combo_items', { combo_id: saved.id }).catch(() => {});
