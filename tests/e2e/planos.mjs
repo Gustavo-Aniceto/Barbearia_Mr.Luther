@@ -9,9 +9,10 @@ const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const SHOTS = process.env.SHOTS || '/tmp/shots'; fs.mkdirSync(SHOTS, { recursive: true });
 const PASS = process.env.PASS;
 if (!PASS) { console.error('Defina PASS'); process.exit(2); }
+const RUN = Math.random().toString(36).slice(2, 8);
 const U = {
-  barber: { name: 'Barbeiro Planos', email: 'barbeiro.planos@example.com', phone: '(11) 92222-0001' },
-  client: { name: 'Cliente Planos', email: 'cliente.planos@example.com', phone: '(11) 92222-0002' },
+  barber: { name: 'Barbeiro Planos', email: `barbeiro.planos.${RUN}@example.com`, phone: '(11) 92222-0001' },
+  client: { name: 'Cliente Planos', email: `cliente.planos.${RUN}@example.com`, phone: '(11) 92222-0002' },
 };
 const db = new pg.Client({ connectionString: process.env.DATABASE_URL_UNPOOLED }); await db.connect();
 const fails = [];
@@ -61,7 +62,7 @@ await step('cadastro do barbeiro e do cliente de teste', async () => {
 
 await step('os 4 planos são cadastrados com dias e limite semanal (mesmo SQL da produção)', async () => {
   await db.query(fs.readFileSync(new URL('../../scripts/seed-planos.sql', import.meta.url), 'utf8'));
-  const r = await db.query("select name, price, allowed_weekdays, max_per_week from plans where name like 'Plano %' and active order by sort_order");
+  const r = await db.query("select name, price, allowed_weekdays, max_per_week from plans where name like 'Plano Corte%' and active order by sort_order");
   expect(r.rowCount === 4, `planos: ${r.rowCount}`);
   expect(r.rows.map((x) => Number(x.price)).join() === '112,135,130,150', 'preços');
   expect(JSON.stringify(r.rows[0].allowed_weekdays) === '[1,2,3,4]' && r.rows[1].allowed_weekdays === null && r.rows.every((x) => x.max_per_week === 1), 'regras');
