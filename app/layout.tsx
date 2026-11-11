@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo } from 'next/font/google';
+import { Bodoni_Moda, Montserrat } from 'next/font/google';
 import '@/client/styles.css';
 
-const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo', display: 'swap' });
+const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat', display: 'swap' });
+const bodoni = Bodoni_Moda({ subsets: ['latin'], style: ['normal', 'italic'], axes: ['opsz'], variable: '--font-bodoni', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -18,7 +19,7 @@ export const viewport: Viewport = { themeColor: '#293328', width: 'device-width'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={archivo.variable}>
+    <html lang="pt-BR" className={`${montserrat.variable} ${bodoni.variable}`}>
       <body>{children}</body>
     </html>
   );
