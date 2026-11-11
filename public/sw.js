@@ -4,7 +4,7 @@
  * - Páginas: sempre buscadas na internet; sem conexão, mostra a tela "sem internet".
  * - API, login e pagamentos: nunca passam por cache (dados pessoais e sempre atuais).
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC = `mrluder-static-${VERSION}`;
 const PAGES = `mrluder-pages-${VERSION}`;
 const OFFLINE = '/offline.html';
@@ -38,11 +38,15 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/app/') || url.pathname.startsWith('/img/')) {
     event.respondWith(
       caches.open(STATIC).then(async (cache) => {
-        const hit = await cache.match(req);
+        const hit = await caches.match(req);
         if (hit) return hit;
-        const res = await fetch(req);
-        if (res.ok && res.type === 'basic') cache.put(req, res.clone());
-        return res;
+        try {
+          const res = await fetch(req);
+          if (res.ok && res.type === 'basic') cache.put(req, res.clone());
+          return res;
+        } catch {
+          return Response.error();
+        }
       }),
     );
   }

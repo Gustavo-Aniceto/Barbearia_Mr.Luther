@@ -37,6 +37,7 @@ const browser = await chromium.launch();
   await page.goto(BASE + '/agendar').catch(() => {});
   const txt = await page.textContent('body').catch(() => '');
   ok(/sem internet/i.test(txt || ''), 'sem internet: mostra a tela "Você está sem internet" com o WhatsApp');
+  ok(await page.evaluate(() => { const i = document.querySelector('img'); return !!i && i.complete && i.naturalWidth > 0; }), 'sem internet: ícone da barbearia aparece');
   await page.screenshot({ path: `${OUT}/pwa-offline.jpg`, type: 'jpeg', quality: 70 });
   await ctx.setOffline(false);
   // Simula o instalador do Chrome: a faixa aparece e o botão chama o instalador nativo
@@ -60,6 +61,7 @@ const browser = await chromium.launch();
   ok(await page.isVisible('.install-banner'), 'iPhone: faixa "Instalar" aparece no topo');
   await page.screenshot({ path: `${OUT}/pwa-ios-banner.jpg`, type: 'jpeg', quality: 70 });
   await page.click('.install-banner .btn');
+  await page.waitForTimeout(500);
   ok(await page.isVisible('.install-sheet'), 'iPhone: "Instalar" abre o passo a passo (Compartilhar → Adicionar à Tela de Início)');
   await page.screenshot({ path: `${OUT}/pwa-ios-sheet.jpg`, type: 'jpeg', quality: 70 });
   await page.click('.install-sheet .btn');
