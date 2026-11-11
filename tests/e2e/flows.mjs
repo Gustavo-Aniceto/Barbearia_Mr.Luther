@@ -89,6 +89,11 @@ await step('senha errada é recusada com mensagem clara', async () => {
 await step('proprietário inicial definido com bootstrap seguro (somente SQL)', async () => {
   const has = (await db.query("select 1 from user_roles ur join roles r on r.id = ur.role_id where r.key = 'proprietario'")).rowCount;
   if (!has) await db.query('select public.bootstrap_owner($1)', [U.adm.email]);
+  else { // ambiente copiado da produção (já tem proprietário): concede o perfil à conta de teste só neste banco de testes
+    await db.query("insert into user_roles (user_id, role_id) select p.id, r.id from profiles p, roles r where lower(p.email) = $1 and r.key = 'proprietario' on conflict do nothing", [U.adm.email]);
+  }
+  // barbeiros reais copiados da produção não atendem online aqui, para o teste usar o Barbeiro Teste
+  await db.query("update barbers set accepts_online_booking = false where display_name <> 'Barbeiro Teste'");
 });
 
 // ---------------------------------------------------------------- 2. Proprietário configura a operação
@@ -342,6 +347,59 @@ await step('matriz de permissões, auditoria e LGPD abrem para o proprietário',
 await step('rotina diária (cron) protegida e funcional', async () => {
   const r1 = await owner.request.get('/api/cron/renewals'); expectTrue(r1.status() === 401, 'sem segredo');
   const r2 = await owner.request.get('/api/cron/renewals', { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }); expectTrue(r2.status() === 200, `com segredo ${r2.status()}`);
+  const j = await r2.json(); expectTrue(/^db\/mrluder-.*\.json\.gz$/.test(j.backup?.key || '') && j.backup.tables >= 50, `backup ${JSON.stringify(j.backup)}`);
+});
+
+// ---------------------------------------------------------------- 8. Funções adicionadas depois (11/11)
+await step('novo barbeiro e serviço novo ficam vinculados a todos automaticamente', async () => {
+  const r = (await db.query(`select (select count(*) from services where active)::int s,
+    (select count(*) from barber_services bs join barbers b on b.id = bs.barber_id where b.display_name = 'Barbeiro Teste')::int l`)).rows[0];
+  expectTrue(r.s > 0 && r.l === r.s, `serviços ${r.s}, vínculos ${r.l}`);
+});
+await step('site mostra preço "a partir de", galeria do Instagram e link do Instagram', async () => {
+  await client.goto('/'); await client.waitForLoadState('networkidle');
+  const minimo = (await db.query("select count(*)::int n from services where price_is_minimum and active")).rows[0].n;
+  if (minimo) await client.locator('#servicos .price-from').first().waitFor({ timeout: 10000 });
+  const ig = (await db.query('select instagram_url from business_settings where id = 1')).rows[0].instagram_url;
+  if (ig) expectTrue(await client.locator(`a[href="${ig}"]`).count() > 0, 'link do Instagram');
+  const g = await client.request.get('/img/galeria/barbeiro-em-acao.jpg'); expectTrue(g.status() === 200, `foto da galeria ${g.status()}`);
+  const h = await client.request.get('/'); expectTrue(h.status() === 200, `home ${h.status()} (renderização no servidor)`);
+});
+await step('aviso por e-mail do agendamento entra na fila (não marcado como enviado sem provedor)', async () => {
+  const r = (await db.query(`select status from notification_logs l join profiles p on p.id = l.user_id
+    where lower(p.email) = $1 and l.event = 'agendamento_realizado' and l.channel = 'email' order by l.created_at desc limit 1`, [U.client.email])).rows[0];
+  expectTrue(!!r, 'sem aviso por e-mail');
+  if (!process.env.BREVO_API_KEY) expectTrue(r.status === 'aguardando_integracao', `status ${r.status}`);
+});
+await step('pagamento online fica oculto quando o Asaas não está configurado', async () => {
+  const g = await client.request.get('/api/payments/checkout'); const j = await g.json();
+  if (!process.env.ASAAS_API_KEY) expectTrue(j.enabled === false, 'botão deveria estar oculto');
+  const p = await client.request.post('/api/payments/checkout', { headers: { Origin: BASE, 'Content-Type': 'application/json' }, data: { kind: 'plano', id: '00000000-0000-0000-0000-000000000000' } });
+  expectTrue([503, 404].includes(p.status()), `checkout ${p.status()}`);
+});
+await step('aviso do Asaas: token falso recusado; mensalidade paga ativa o plano; aviso repetido não paga 2x', async () => {
+  const token = process.env.ASAAS_WEBHOOK_TOKEN; expectTrue(!!token && process.env.PAYMENT_PROVIDER === 'asaas', 'defina PAYMENT_PROVIDER e ASAAS_WEBHOOK_TOKEN para este teste');
+  const { c: c2, p: client2 } = await login(U.client2);
+  const plan = (await db.query("select id from plans where name = 'Plano Teste'")).rows[0].id;
+  let sub = (await db.query("select s.id from subscriptions s join customers c on c.id = s.customer_id where c.email = $1 and s.plan_id = $2 and s.status in ('pendente','ativa')", [U.client2.email, plan])).rows[0]?.id;
+  if (!sub) { const r = await api(client2, { op: 'rpc', fn: 'subscribe_plan', args: { p_plan: plan } }); expectTrue(r.status === 200, `contratar ${r.json?.message}`); sub = r.json.data; }
+  const gsub = 'sub_e2e_' + sub.slice(0, 8);
+  await db.query("update subscriptions set gateway = 'asaas', gateway_subscription_id = $2 where id = $1", [sub, gsub]);
+  const hook = (body, tk = token) => client2.request.post('/api/webhooks/payments', { headers: { 'asaas-access-token': tk, 'Content-Type': 'application/json' }, data: body });
+  const ev = { id: 'evt_e2e_1', event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_e2e_' + sub.slice(0, 8), subscription: gsub, value: 80, externalReference: null } };
+  expectTrue((await hook(ev, 'x'.repeat(64))).status() === 401, 'token falso aceito');
+  const r1 = await (await hook(ev)).json(); expectTrue(r1.result === 'ok', `1º aviso ${JSON.stringify(r1)}`);
+  const r2 = await (await hook({ ...ev, event: 'PAYMENT_RECEIVED' })).json(); expectTrue(r2.result === 'duplicado', `repetido ${JSON.stringify(r2)}`);
+  const st = (await db.query("select status, current_period_end > now() + interval '25 days' ok from subscriptions where id = $1", [sub])).rows[0];
+  expectTrue(st.status === 'ativa' && st.ok, `plano ${st.status}`);
+  const n = (await db.query("select count(*)::int n from payment_transactions where gateway_reference = $1", [ev.payment.id])).rows[0].n; expectTrue(n === 1, `pagamentos registrados ${n}`);
+  const odd = await (await hook({ id: 'evt_e2e_2', event: 'PAYMENT_RECEIVED', payment: { id: 'pay_e2e_x', subscription: null, externalReference: 'nao-e-um-id', value: 1 } })).json();
+  expectTrue(odd.result === 'ignorado', `aviso sem referência ${JSON.stringify(odd)}`);
+  // cliente cancela no site: renovação desligada, benefícios pagos continuam
+  const cx = await api(client2, { op: 'rpc', fn: 'set_subscription_status', args: { p_sub: sub, p_status: 'cancelada' } }); expectTrue(cx.status === 200, `cancelar ${cx.json?.message}`);
+  const after = (await db.query('select status, auto_renew from subscriptions where id = $1', [sub])).rows[0];
+  expectTrue(after.status === 'ativa' && after.auto_renew === false, `após cancelar ${JSON.stringify(after)}`);
+  await c2.close();
 });
 
 for (const c of [oc, cc, bc]) await c.close();
