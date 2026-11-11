@@ -8,7 +8,8 @@ import { cancelGatewaySubscription } from '@/lib/server/payments';
 
 // Operações que geram avisos ao cliente: o envio acontece logo depois da resposta, sem atrasá-la.
 const NOTIFYING = new Set(['book_appointment', 'cancel_appointment', 'reschedule_appointment', 'set_appointment_status',
-  'subscribe_plan', 'set_subscription_status', 'receive_payment', 'place_order', 'update_order_status', 'register_payment']);
+  'subscribe_plan', 'set_subscription_status', 'receive_payment', 'place_order', 'update_order_status', 'register_payment',
+  'request_fixed_slot', 'decide_fixed_slot', 'cancel_fixed_slot']);
 
 export const dynamic = 'force-dynamic';
 

@@ -18,6 +18,7 @@ export function Booking() {
   const [barber, setBarber] = useState<string>(q.get('barbeiro') || '');
   const [step, setStep] = useState(() => (q.get('inicio') ? 3 : selected.length ? (q.get('barbeiro') ? 2 : 1) : 0));
   const [day, setDay] = useState<string>(q.get('dia') || '');
+  const [autoDay, setAutoDay] = useState(false);
   const [slot, setSlot] = useState<Slot | null>(q.get('inicio') ? { starts_at: q.get('inicio')!, barber_id: q.get('b') || '', barber_name: q.get('bn') || '' } : null);
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsErr, setSlotsErr] = useState<string | null>(null);
@@ -54,7 +55,14 @@ export function Booking() {
       .then(setSlots).catch((e) => setSlotsErr(e.message));
   }, [step, day, barber, selected.join(',')]);
 
-  useEffect(() => { if (step === 2 && !day) { const first = days.find((x) => x.open); if (first) setDay(first.d); } }, [step, days]);
+  useEffect(() => { if (step === 2 && !day) { const first = days.find((x) => x.open); if (first) { setAutoDay(true); setDay(first.d); } } }, [step, days]);
+  // Dia escolhido automaticamente e já sem vagas (ex.: hoje à noite): avança sozinho para o próximo dia aberto com horário livre.
+  useEffect(() => {
+    if (!autoDay || slots === null || slotsErr) return;
+    if (slots.length) { setAutoDay(false); return; }
+    const next = days.find((x) => x.open && x.d > day);
+    if (next && next.d <= addDays(days[0].d, 7)) setDay(next.d); else setAutoDay(false);
+  }, [autoDay, slots, slotsErr]);
 
   if (error) return <SiteLayout><div className="wrap page"><ErrorBox error={error} onRetry={reload} /></div></SiteLayout>;
   if (!site) return <SiteLayout><Loading /></SiteLayout>;
@@ -153,7 +161,7 @@ export function Booking() {
                 <h2>Escolha o dia</h2>
                 <div className="days" role="group" aria-label="Dias">
                   {days.map(({ d, wd, open }) => (
-                    <button key={d} className="day" disabled={!open} aria-pressed={day === d} onClick={() => { setDay(d); setSlot(null); }}>
+                    <button key={d} className="day" disabled={!open} aria-pressed={day === d} onClick={() => { setAutoDay(false); setDay(d); setSlot(null); }}>
                       {WEEKDAYS[wd].slice(0, 3)}<strong>{d.slice(8)}</strong>{new Date(d + 'T12:00:00Z').toLocaleDateString('pt-BR', { month: 'short', timeZone: 'UTC' }).replace('.', '')}
                     </button>
                   ))}

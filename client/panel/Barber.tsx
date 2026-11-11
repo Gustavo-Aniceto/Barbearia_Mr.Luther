@@ -5,6 +5,7 @@ import { APPT_STATUS, WEEKDAYS, addDays, fmtDate, fmtDateTime, fmtTime, isoDay, 
 import { Badge, Button, Empty, ErrorBox, Field, Input, Loading, Modal, Select, Textarea, useConfirm, useToast } from '../lib/ui';
 import { AgendaBoard, EventModal } from './Agenda';
 import { PanelLayout, RequireStaff, NavItem } from './Layout';
+import { ExpiringPlansCard, FixedSlotsCard } from './FixedSlots';
 
 const NAV: NavItem[] = [
   { to: '/barbeiro', label: 'Hoje', icon: 'clock' }, { to: '/barbeiro/agenda', label: 'Minha agenda', icon: 'calendar', short: 'Agenda' },
@@ -66,6 +67,8 @@ function Today() {
           <div className="kpi"><span>Atendimentos no mês</span><strong>{m?.atendimentos ?? '–'}</strong><small>{m?.faltas ?? 0} faltas</small></div>
         </section>
       </div>
+      <FixedSlotsCard hideEmpty />
+      <ExpiringPlansCard />
       <section className="card">
         <div className="card-head"><h2>Agenda de hoje</h2><Button size="sm" variant="line" onClick={evs.reload}>Atualizar</Button></div>
         {evs.data!.length === 0 ? <Empty title="Nenhum agendamento hoje" /> : (

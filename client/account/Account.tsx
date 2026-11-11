@@ -1,8 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { db } from '../lib/api';
-import { APPT_STATUS, ORDER_STATUS, SUB_STATUS, Link, money, fmtDate, fmtTime, fmtDateTime, fmtLongDate, isoDay, addDays, useAuth, useLoad, useQuery, navigate } from '../lib/core';
-import { Badge, Button, Empty, ErrorBox, Field, Icon, Input, Loading, Modal, Stars, Textarea, Toggle, useConfirm, useToast } from '../lib/ui';
+import { APPT_STATUS, ORDER_STATUS, SUB_STATUS, WEEKDAYS, Link, money, fmtDate, fmtTime, fmtDateTime, fmtLongDate, isoDay, addDays, useAuth, useLoad, useQuery, navigate } from '../lib/core';
+import { Badge, Button, Empty, ErrorBox, Field, Icon, Input, Loading, Modal, Select, Stars, Textarea, Toggle, useConfirm, useToast } from '../lib/ui';
 import { SiteLayout } from '../site/Home';
 import { useSite } from '../site/data';
 
@@ -251,6 +251,7 @@ function Plans() {
             <ul className="list-plain" style={{ marginTop: 8 }}>
               {s.benefits.map((b: any, i: number) => <li key={i}><span>{b.description}</span><span className="cell-sub">{b.service_id ? (b.quantity ? `${b.used} de ${b.quantity} usados` : `${b.used} usados · ilimitado`) : ''}</span></li>)}
             </ul>
+            {(s.allowed_weekdays || s.max_per_week) && <p className="muted" style={{ fontSize: 14, marginTop: 6 }}>Vale {s.weekdays_label}{s.max_per_week ? ` · até ${s.max_per_week} por semana` : ''}.</p>}
           </div>
           <div style={{ display: 'grid', gap: 8, justifyItems: 'end', alignContent: 'start' }}>
           {payOn && ['pendente', 'inadimplente'].includes(s.status) && <PayOnline kind="plano" id={s.id} label={s.status === 'inadimplente' ? 'Pagar mensalidade' : 'Pagar online'} />}
@@ -261,10 +262,87 @@ function Plans() {
             }}>Cancelar</Button>
           )}
           </div>
+          {s.status === 'ativa' && <div style={{ gridColumn: '1 / -1' }}><FixedSlot sub={s} onChanged={reload} /></div>}
         </div>
       ))}
     </section>
   </>);
+}
+
+/** Horário fixo do plano: o cliente escolhe dia, hora e barbeiro; o barbeiro aprova e as datas do mês ficam reservadas. */
+function FixedSlot({ sub, onChanged }: { sub: any; onChanged: () => void }) {
+  const { site } = useSite();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const fs = sub.fixed_slot && ['pendente', 'aprovado'].includes(sub.fixed_slot.status) ? sub.fixed_slot : null;
+  const last = sub.fixed_slot && !fs ? sub.fixed_slot : null;
+  const days: number[] = (sub.allowed_weekdays && sub.allowed_weekdays.length ? sub.allowed_weekdays : [0, 1, 2, 3, 4, 5, 6])
+    .filter((d: number) => site?.hours.find((h) => h.weekday === d)?.is_open);
+  const [open, setOpen] = useState(false);
+  const [day, setDay] = useState<number | ''>('');
+  const [time, setTime] = useState('');
+  const [barber, setBarber] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const serviceIds: string[] = sub.benefits.map((b: any) => b.service_id).filter(Boolean);
+  const barbers = (site?.barbers || []).filter((b) => serviceIds.every((id) => b.service_ids.includes(id)));
+  const times = (() => {
+    const h = site?.hours.find((x) => x.weekday === day);
+    if (!h?.is_open || !h.opens_at || !h.closes_at) return [] as string[];
+    const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+    const dur = Math.max(...sub.benefits.map((b: any) => site?.services.find((x) => x.id === b.service_id)?.duration_minutes || 0), 30);
+    const out: string[] = [];
+    for (let m = toMin(h.opens_at); m + dur <= toMin(h.closes_at); m += 10) out.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+    return out;
+  })();
+
+  if (fs) return (
+    <div className="fixed-slot">
+      <div className="fixed-slot-head"><Icon name="clock" /><div>
+        <strong>Horário fixo: {fs.label}</strong>
+        <span className="muted">com {fs.barber_name} · {fs.status === 'pendente' ? 'aguardando aprovação do barbeiro' : 'aprovado'}</span>
+      </div>{fs.status === 'aprovado' ? <Badge tone="ok">Aprovado</Badge> : <Badge tone="warn">Em análise</Badge>}</div>
+      {fs.status === 'aprovado' && (fs.next_dates.length
+        ? <p className="muted" style={{ fontSize: 14 }}>Datas reservadas: {fs.next_dates.map((d: string) => fmtDate(d).slice(0, 5)).join(', ')}. Ao renovar o plano, o próximo mês é reservado sozinho.</p>
+        : <p className="muted" style={{ fontSize: 14 }}>Nenhuma data futura neste período. Ao renovar o plano, as próximas são reservadas sozinhas.</p>)}
+      <div><Button size="sm" variant="ghost" onClick={async () => {
+        if (!(await confirm({ title: fs.status === 'pendente' ? 'Cancelar o pedido?' : 'Cancelar o horário fixo?', text: fs.status === 'pendente' ? 'O barbeiro deixa de ver este pedido.' : 'As datas futuras reservadas por este horário serão liberadas.', confirm: 'Cancelar horário fixo', danger: true }))) return;
+        try { await db.rpc('cancel_fixed_slot', { p_id: fs.id }); toast.ok('Horário fixo cancelado'); onChanged(); } catch (e) { toast.error((e as Error).message); }
+      }}>{fs.status === 'pendente' ? 'Cancelar pedido' : 'Cancelar horário fixo'}</Button></div>
+    </div>
+  );
+  return (
+    <div className="fixed-slot">
+      <div className="fixed-slot-head"><Icon name="clock" /><div>
+        <strong>Horário fixo</strong>
+        <span className="muted">Corta sempre no mesmo dia e hora? Peça o seu horário fixo: depois que o barbeiro aprovar, as datas do mês ficam reservadas para você.</span>
+      </div></div>
+      {last?.status === 'recusado' && <p className="muted" style={{ fontSize: 14 }}>Seu último pedido ({last.label}) não foi aprovado{last.decision_note ? `: ${last.decision_note}` : '.'}</p>}
+      {!open ? <div><Button size="sm" variant="line" onClick={() => setOpen(true)}>Pedir horário fixo</Button></div> : (
+        <form className="fixed-slot-form" onSubmit={async (e) => {
+          e.preventDefault();
+          if (day === '' || !time || !barber) { setErr('Escolha o dia, o horário e o barbeiro.'); return; }
+          setErr(''); setBusy(true);
+          try {
+            await db.rpc('request_fixed_slot', { p_sub: sub.id, p_barber: barber, p_weekday: day, p_time: time, p_note: note || null });
+            toast.ok('Pedido enviado. Você recebe um aviso quando o barbeiro responder.'); setOpen(false); onChanged();
+          } catch (e2) { setErr((e2 as Error).message); }
+          setBusy(false);
+        }}>
+          <Field label="Dia da semana"><Select value={day} onChange={(e) => { setDay(e.target.value === '' ? '' : Number(e.target.value)); setTime(''); }}>
+            <option value="">Escolha</option>{days.map((d) => <option key={d} value={d}>{WEEKDAYS[d]}</option>)}</Select></Field>
+          <Field label="Horário"><Select value={time} disabled={day === ''} onChange={(e) => setTime(e.target.value)}>
+            <option value="">{day === '' ? 'Escolha o dia primeiro' : 'Escolha'}</option>{times.map((t) => <option key={t} value={t}>{t}</option>)}</Select></Field>
+          <Field label="Barbeiro"><Select value={barber} onChange={(e) => setBarber(e.target.value)}>
+            <option value="">Escolha</option>{barbers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select></Field>
+          <Field label="Recado para o barbeiro (opcional)"><Input value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: chego direto do trabalho" /></Field>
+          {err && <p className="field-error" role="alert">{err}</p>}
+          <div className="fixed-slot-actions"><Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); setErr(''); }}>Voltar</Button><Button type="submit" size="sm" loading={busy}>Enviar pedido</Button></div>
+        </form>
+      )}
+    </div>
+  );
 }
 
 // ------------------------------------------------------------------ Club
