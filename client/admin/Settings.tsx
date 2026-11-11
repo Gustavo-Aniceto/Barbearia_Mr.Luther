@@ -85,13 +85,14 @@ function NotificationSettings({ editable }: { editable: boolean }) {
   const toast = useToast();
   const list = useLoad(() => db.select('notification_settings', {}, { order: 'label.asc' }));
   const queued = useLoad(() => db.select('notification_logs', { status: 'aguardando_integracao' }, { limit: 1 }).catch(() => []));
+  const failed = useLoad(() => db.select('notification_logs', { status: 'falhou' }, { limit: 1, order: 'created_at.desc' }).catch(() => []));
   const upd = async (n: any, patch: any) => { try { await db.update('notification_settings', { event: n.event }, patch); list.reload(); } catch (e) { toast.error((e as Error).message); } };
   return (
     <section className="card" style={{ display: 'grid', gap: 14 }}>
-      <div className="notice warn"><Icon name="bell" /><span>E-mail e WhatsApp Business ainda não têm provedor configurado. Mensagens desses canais ficam na fila com status “aguardando integração” e <strong>não são enviadas nem marcadas como enviadas</strong>. Hoje funcionam: avisos internos na conta do cliente e links de WhatsApp na agenda.{queued.data?.length ? ' Há mensagens na fila.' : ''}</span></div>
-      <div className="table-wrap"><table className="table"><thead><tr><th>Evento</th><th>Aviso interno</th><th>E-mail</th><th>WhatsApp</th></tr></thead>
+      <div className="notice"><Icon name="bell" /><span>Os avisos ao cliente saem por <strong>e-mail</strong> e <strong>SMS</strong> pelo Brevo, com data, horário, profissional, serviços, valor e endereço. Enquanto o Brevo não estiver configurado na Vercel (docs/NOTIFICACOES.md), as mensagens ficam na fila e <strong>não são marcadas como enviadas</strong>; avisos com mais de 48 h na fila expiram. WhatsApp Business ainda não tem integração.{queued.data?.length ? ' Há mensagens aguardando envio.' : ''}{failed.data?.length ? ' Há envios com falha recente: confira o e-mail ou o celular do cliente.' : ''}</span></div>
+      <div className="table-wrap"><table className="table"><thead><tr><th>Evento</th><th>Aviso interno</th><th>E-mail</th><th>SMS</th><th>WhatsApp</th></tr></thead>
         <tbody>{(list.data || []).map((n: any) => <tr key={n.event}><td className="cell-strong">{n.label}</td>
-          {(['internal_enabled', 'email_enabled', 'whatsapp_enabled'] as const).map((k) => <td key={k}><input type="checkbox" aria-label={`${n.label} ${k}`} checked={n[k]} disabled={!editable} onChange={(e) => upd(n, { [k]: e.target.checked })} style={{ accentColor: 'var(--moss)', width: 17, height: 17 }} /></td>)}</tr>)}</tbody></table></div>
+          {(['internal_enabled', 'email_enabled', 'sms_enabled', 'whatsapp_enabled'] as const).map((k) => <td key={k}><input type="checkbox" aria-label={`${n.label} ${k}`} checked={n[k]} disabled={!editable} onChange={(e) => upd(n, { [k]: e.target.checked })} style={{ accentColor: 'var(--moss)', width: 17, height: 17 }} /></td>)}</tr>)}</tbody></table></div>
     </section>
   );
 }

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { asOwner } from '@/lib/server/db';
+import { dispatchNotifications } from '@/lib/server/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
 const eq = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 export async function POST(req: Request) {
+  after(() => dispatchNotifications().catch((e) => console.error('notificações:', e)));
   const provider = process.env.PAYMENT_PROVIDER;
   if (!provider) return new Response('Gateway não configurado', { status: 503 });
   try {

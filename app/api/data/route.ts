@@ -1,8 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { asUser } from '@/lib/server/db';
 import { executeData, toHttpError, type DataRequest } from '@/lib/server/data-api';
 import { getIdentity } from '@/lib/server/identity';
 import { sameOrigin } from '@/lib/server/http';
+import { dispatchNotifications } from '@/lib/server/notify';
+
+// Operações que geram avisos ao cliente: o envio acontece logo depois da resposta, sem atrasá-la.
+const NOTIFYING = new Set(['book_appointment', 'cancel_appointment', 'reschedule_appointment', 'set_appointment_status',
+  'subscribe_plan', 'set_subscription_status', 'receive_payment', 'place_order', 'update_order_status', 'register_payment']);
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +19,9 @@ export async function POST(req: Request) {
   try {
     const me = await getIdentity();
     const data = await asUser(me?.profileId ?? null, (c) => executeData(c, body));
+    if (body.op === 'rpc' && NOTIFYING.has(String((body as { fn?: string }).fn))) {
+      after(() => dispatchNotifications().catch((e) => console.error('notificações:', e)));
+    }
     return NextResponse.json({ data }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     const { status, body: b } = toHttpError(e);
