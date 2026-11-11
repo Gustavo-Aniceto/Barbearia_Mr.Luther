@@ -47,8 +47,12 @@ try {
   for (const t of order) {
     const rows = dump.tables[t];
     if (!rows.length) continue;
+    // Colunas gravadas (sem as calculadas); ids de identidade mantêm o valor original (OVERRIDING SYSTEM VALUE).
+    const cols = (await c.query(`select a.attname from pg_attribute a where a.attrelid = ('public.' || quote_ident($1))::regclass
+      and a.attnum > 0 and not a.attisdropped and a.attgenerated = '' order by a.attnum`, [t])).rows.map((r) => q(r.attname)).join(', ');
     // Uma instrução por tabela: referências da tabela para ela mesma são verificadas no fim da instrução.
-    await c.query(`insert into public.${q(t)} select * from json_populate_recordset(null::public.${q(t)}, $1::json)`, [JSON.stringify(rows)]);
+    await c.query(`insert into public.${q(t)} (${cols}) overriding system value
+      select ${cols} from json_populate_recordset(null::public.${q(t)}, $1::json)`, [JSON.stringify(rows)]);
     total += rows.length;
     console.log(`  ${t}: ${rows.length}`);
   }
