@@ -114,9 +114,13 @@ export function Home() {
 function Hero() {
   const { site } = useSite();
   const s = site!.settings;
-  const title: string = s.hero_title || 'MAIS QUE UM CORTE. UMA EXPERIÊNCIA.';
+  const raw: string = s.hero_title || 'Mais que um corte. Uma experiência.';
+  // Com a fonte serifada o título fica mais elegante em caixa normal: "MAIS QUE UM CORTE." vira "Mais que um corte."
+  const title = raw === raw.toLocaleUpperCase('pt-BR')
+    ? raw.toLocaleLowerCase('pt-BR').replace(/(^|[.!?]\s+)(\p{L})/gu, (_, a, b) => a + b.toLocaleUpperCase('pt-BR')).replace(/mr\.?\s?luder/gi, 'MR.LUDER')
+    : raw;
   // Quebra o título nas frases para a revelação linha a linha
-  const parts = title.split(/(?<=\.)\s+/).flatMap((p) => (p.length > 16 && !p.includes('EXPERI') ? p.replace(/^(\S+\s+\S+)\s+/, '$1\n').split('\n') : [p]));
+  const parts = title.split(/(?<=\.)\s+/).flatMap((p) => (p.length > 16 && !/experi/i.test(p) ? p.replace(/^(\S+\s+\S+)\s+/, '$1\n').split('\n') : [p]));
   return (
     <section className="hero" aria-labelledby="hero-title">
       <div className="wrap hero-grid">
