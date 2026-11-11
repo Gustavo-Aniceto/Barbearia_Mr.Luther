@@ -11,7 +11,8 @@ export function navigate(to: string, replace = false) {
   routeListeners.forEach((l) => l());
   if (!to.includes('#')) window.scrollTo({ top: 0 });
 }
-window.addEventListener('popstate', () => routeListeners.forEach((l) => l()));
+// Só no navegador: este módulo também é avaliado na renderização do servidor (logo de carregamento).
+if (typeof window !== 'undefined') window.addEventListener('popstate', () => routeListeners.forEach((l) => l()));
 export function usePath() {
   const [p, setP] = useState(location.pathname);
   useEffect(() => { const l = () => setP(location.pathname); routeListeners.add(l); return () => { routeListeners.delete(l); }; }, []);
