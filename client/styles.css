@@ -556,7 +556,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 
 /* Alvos de toque de pelo menos 44 px; campos com 16 px (evita o zoom automático do iPhone) */
 @media (pointer: coarse), (max-width: 760px) {
-  .icon-btn { width: 44px; height: 44px; }
+  .icon-btn { width: 44px; height: 44px; flex-shrink: 0; }
   .btn-sm { min-height: 40px; padding: 8px 14px; font-size: 14px; }
   .btn-md { min-height: 46px; }
   .chip { min-height: 40px; }
