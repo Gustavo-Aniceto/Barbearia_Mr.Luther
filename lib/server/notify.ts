@@ -179,6 +179,6 @@ async function sendSms(r: Row, ctx: Ctx): Promise<string> {
 async function providerResult(res: Response): Promise<string> {
   const txt = await res.text();
   if (res.ok) { try { return String(JSON.parse(txt).messageId ?? ''); } catch { return ''; } }
-  // 4xx (exceto 429) = dados inválidos: não adianta repetir. 429/5xx = tenta de novo depois.
-  throw new SendError(`Brevo ${res.status}: ${txt.slice(0, 300)}`, res.status >= 400 && res.status < 500 && res.status !== 429);
+  // 400/404/422 = dados inválidos: não adianta repetir. 401/403 (configuração da conta), 429 e 5xx = tenta de novo depois.
+  throw new SendError(`Brevo ${res.status}: ${txt.slice(0, 300)}`, [400, 404, 422].includes(res.status));
 }
