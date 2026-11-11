@@ -8,16 +8,17 @@ import { Badge, Button, Empty, ErrorBox, Field, Loading, Modal, Textarea, useCon
  * Horários fixos dos assinantes. O barbeiro vê os pedidos feitos para ele;
  * a equipe com acesso à agenda vê todos. Aprovar reserva as datas do mês do plano.
  */
-export function FixedSlotsCard({ showBarber = false }: { showBarber?: boolean }) {
+export function FixedSlotsCard({ showBarber = false, hideEmpty = false }: { showBarber?: boolean; hideEmpty?: boolean }) {
   const list = useLoad(() => db.rpc<any[]>('fixed_slots_board'));
   const toast = useToast();
   const confirm = useConfirm();
   const [busy, setBusy] = useState<string | null>(null);
   const [decline, setDecline] = useState<any>(null);
-  if (list.loading) return <section className="card"><Loading /></section>;
+  if (list.loading) return hideEmpty ? null : <section className="card"><Loading /></section>;
   if (list.error) return <section className="card"><ErrorBox error={list.error} onRetry={list.reload} /></section>;
   const pending = list.data!.filter((s) => s.status === 'pendente');
   const approved = list.data!.filter((s) => s.status === 'aprovado');
+  if (hideEmpty && list.data!.length === 0) return null;
 
   async function approve(s: any) {
     setBusy(s.id);

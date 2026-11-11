@@ -67,6 +67,8 @@ function Today() {
           <div className="kpi"><span>Atendimentos no mês</span><strong>{m?.atendimentos ?? '–'}</strong><small>{m?.faltas ?? 0} faltas</small></div>
         </section>
       </div>
+      <FixedSlotsCard hideEmpty />
+      <ExpiringPlansCard />
       <section className="card">
         <div className="card-head"><h2>Agenda de hoje</h2><Button size="sm" variant="line" onClick={evs.reload}>Atualizar</Button></div>
         {evs.data!.length === 0 ? <Empty title="Nenhum agendamento hoje" /> : (
@@ -77,8 +79,6 @@ function Today() {
             ))}</tbody></table></div>
         )}
       </section>
-      <FixedSlotsCard />
-      <ExpiringPlansCard />
       {sel && <EventModal ev={sel} mode="barbeiro" onClose={() => setSel(null)} onChanged={() => { setSel(null); evs.reload(); metrics.reload(); }} />}
     </>
   );

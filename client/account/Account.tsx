@@ -252,7 +252,6 @@ function Plans() {
               {s.benefits.map((b: any, i: number) => <li key={i}><span>{b.description}</span><span className="cell-sub">{b.service_id ? (b.quantity ? `${b.used} de ${b.quantity} usados` : `${b.used} usados · ilimitado`) : ''}</span></li>)}
             </ul>
             {(s.allowed_weekdays || s.max_per_week) && <p className="muted" style={{ fontSize: 14, marginTop: 6 }}>Vale {s.weekdays_label}{s.max_per_week ? ` · até ${s.max_per_week} por semana` : ''}.</p>}
-            {s.status === 'ativa' && <FixedSlot sub={s} onChanged={reload} />}
           </div>
           <div style={{ display: 'grid', gap: 8, justifyItems: 'end', alignContent: 'start' }}>
           {payOn && ['pendente', 'inadimplente'].includes(s.status) && <PayOnline kind="plano" id={s.id} label={s.status === 'inadimplente' ? 'Pagar mensalidade' : 'Pagar online'} />}
@@ -263,6 +262,7 @@ function Plans() {
             }}>Cancelar</Button>
           )}
           </div>
+          {s.status === 'ativa' && <div style={{ gridColumn: '1 / -1' }}><FixedSlot sub={s} onChanged={reload} /></div>}
         </div>
       ))}
     </section>
