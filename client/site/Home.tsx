@@ -69,7 +69,23 @@ export function SiteFooter() {
 }
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
-  return (<><a href="#conteudo" className="sr-only">Pular para o conteúdo</a><SiteHeader /><main id="conteudo">{children}</main><SiteFooter /></>);
+  return (<><a href="#conteudo" className="sr-only">Pular para o conteúdo</a><SiteHeader /><main id="conteudo">{children}</main><SiteFooter /><MobileCta /></>);
+}
+
+/** Celular: "Agendar" e WhatsApp sempre ao alcance do polegar nas páginas de navegação do site. */
+const CTA_HIDDEN = ['/agendar', '/entrar', '/cadastro', '/recuperar-senha', '/alterar-senha', '/carrinho', '/conta'];
+function MobileCta() {
+  const { site } = useSite();
+  const path = usePath();
+  if (CTA_HIDDEN.some((p) => path.startsWith(p))) return null;
+  const wa = site?.settings?.whatsapp;
+  return (<>
+    <div className="mobile-cta-space" aria-hidden="true" />
+    <div className="mobile-cta" role="region" aria-label="Agendar">
+      <Link to="/agendar" className="btn btn-primary btn-lg"><Icon name="calendar" size={18} /> Agendar horário</Link>
+      {wa && <a className="btn btn-lg mobile-cta-wa" href={whatsappLink(wa)} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"><Icon name="whatsapp" size={20} /></a>}
+    </div>
+  </>);
 }
 
 // ------------------------------------------------------------------ Página inicial

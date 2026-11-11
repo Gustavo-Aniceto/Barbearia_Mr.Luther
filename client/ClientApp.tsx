@@ -15,8 +15,32 @@ const TITLES: [RegExp, string][] = [
   [/^\/loja/, 'Produtos'], [/^\/carrinho/, 'Carrinho'], [/^\/entrar/, 'Entrar'], [/^\/cadastro/, 'Criar conta'], [/^\/club/, 'MR.LUDER Club'],
 ];
 
+/**
+ * No celular as tabelas viram cartões (CSS). Para cada célula mostrar a que coluna pertence,
+ * copiamos o título da coluna para data-label — automaticamente, em qualquer tabela que aparecer.
+ */
+function useTableLabels() {
+  useEffect(() => {
+    const label = () => {
+      document.querySelectorAll<HTMLTableElement>('table.table').forEach((t) => {
+        const heads = [...t.querySelectorAll('thead th')].map((th) => (th.textContent || '').trim());
+        if (!heads.length) return;
+        t.querySelectorAll('tbody tr').forEach((tr) => [...tr.children].forEach((td, i) => {
+          if (td.getAttribute('data-label') !== (heads[i] || '')) td.setAttribute('data-label', heads[i] || '');
+        }));
+      });
+    };
+    label();
+    let raf = 0;
+    const mo = new MutationObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(label); });
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => { mo.disconnect(); cancelAnimationFrame(raf); };
+  }, []);
+}
+
 function Router() {
   const path = usePath();
+  useTableLabels();
   useEffect(() => {
     const t = TITLES.find(([r]) => r.test(path));
     document.title = t ? `${t[1]} · MR.LUDER Barbearia` : 'MR.LUDER Barbearia · Guarulhos';
