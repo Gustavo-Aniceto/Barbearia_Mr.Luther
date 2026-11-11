@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export const maxDuration = 120;
 
-/** Rotina diária (Vercel Cron, ver vercel.json): backup, renovações de planos, lembretes da véspera e envio da fila de avisos. */
+/** Rotina diária (Vercel Cron, ver vercel.json): backup, renovações de planos, lembretes da véspera, aviso de plano vencendo e envio da fila de avisos. */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) return new Response('Não autorizado', { status: 401 });
@@ -16,6 +16,8 @@ export async function GET(req: Request) {
   try { backup = await runBackup(); } catch (e) { console.error('backup:', e); backup = { error: (e as Error).message }; }
   const n = await asOwner(async (c) => (await c.query('select public.process_subscription_renewals() as n')).rows[0].n);
   const reminders = await asOwner(async (c) => (await c.query('select public.queue_appointment_reminders() as n')).rows[0].n);
+  // Plano vencendo em até 3 dias: avisa o cliente e o barbeiro (uma vez por período)
+  const expiring = await asOwner(async (c) => (await c.query('select public.queue_subscription_expiry_notices() as n')).rows[0].n);
   const notifications = await dispatchNotifications(200);
-  return NextResponse.json({ backup, processed: n, reminders, notifications }, { status: backup && (backup as { error?: string }).error ? 500 : 200 });
+  return NextResponse.json({ backup, processed: n, reminders, expiring, notifications }, { status: backup && (backup as { error?: string }).error ? 500 : 200 });
 }
