@@ -82,12 +82,12 @@ function SecurityInfo() {
       <h2 style={{ fontSize: 15.5 }}>Medidas técnicas implementadas</h2>
       <ul className="list-plain">
         <li><span>Row Level Security em todas as tabelas; permissões verificadas no banco por perfil</span><Badge tone="ok">Ativo</Badge></li>
-        <li><span>Senhas com hash bcrypt (Supabase Auth); sessão com expiração e renovação</span><Badge tone="ok">Ativo</Badge></li>
+        <li><span>Senhas gerenciadas pelo Neon Managed Better Auth; sessão em cookie httpOnly</span><Badge tone="ok">Ativo</Badge></li>
         <li><span>Registro de auditoria de alterações administrativas (quem, quando, antes/depois)</span><Badge tone="ok">Ativo</Badge></li>
         <li><span>Consentimentos versionados; marketing desmarcado por padrão</span><Badge tone="ok">Ativo</Badge></li>
         <li><span>Exportação dos dados pelo titular e anonimização preservando registros fiscais</span><Badge tone="ok">Ativo</Badge></li>
         <li><span>Nenhum dado de cartão armazenado; chaves secretas somente no servidor</span><Badge tone="ok">Ativo</Badge></li>
-        <li><span>Criptografia em trânsito (HTTPS) e backups diários</span><Badge tone="info">No Supabase / hospedagem</Badge></li>
+        <li><span>Criptografia em trânsito (HTTPS), restore do Neon e dump diário</span><Badge tone="info">Neon + GitHub Actions</Badge></li>
       </ul>
       <h2 style={{ fontSize: 15.5 }}>A definir pelos responsáveis</h2>
       <ul className="list-plain">

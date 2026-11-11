@@ -11,22 +11,24 @@
     "typecheck": "tsc --noEmit",
     "test:db": "./scripts/test-db.sh"
   },
-  "engines": { "node": ">=20.9" },
+  "engines": {
+    "node": ">=20.9"
+  },
   "dependencies": {
-    "@aws-sdk/client-s3": "latest",
-    "@neon/auth": "latest",
-    "@vercel/functions": "latest",
-    "next": "latest",
-    "pg": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "server-only": "latest"
+    "@aws-sdk/client-s3": "3.1166.0",
+    "@neon/auth": "0.8.2",
+    "@vercel/functions": "3.11.1",
+    "next": "16.4.6",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "@types/pg": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "typescript": "latest"
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "7.0.2"
   }
 }

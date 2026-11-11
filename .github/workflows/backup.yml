@@ -1,0 +1,46 @@
+# Backup lógico diário do banco (complementar ao restore nativo do Neon).
+# Gera um pg_dump compactado e guarda no Neon Object Storage (bucket de backups),
+# mantendo 30 dias. Segredos necessários em GitHub → Settings → Secrets and variables → Actions:
+#   BACKUP_DATABASE_URL (conexão direta, sem -pooler), AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+#   AWS_ENDPOINT_URL_S3, AWS_REGION, BACKUP_BUCKET
+name: Backup do banco
+on:
+  schedule:
+    - cron: '30 6 * * *' # 03:30 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    if: ${{ vars.BACKUP_ENABLED == 'true' }}
+    steps:
+      - name: Instalar cliente PostgreSQL 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+      - name: Gerar dump
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges \
+            --exclude-schema=neon_auth --file=mrluder-$(date -u +%Y%m%d-%H%M).dump
+          ls -lh *.dump
+      - name: Enviar para o Neon Object Storage e aplicar retenção
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL_S3: ${{ secrets.AWS_ENDPOINT_URL_S3 }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          BUCKET: ${{ secrets.BACKUP_BUCKET }}
+        run: |
+          aws configure set default.s3.addressing_style path
+          aws s3 cp *.dump "s3://$BUCKET/db/"
+          cutoff=$(date -u -d '30 days ago' +%Y%m%d)
+          aws s3 ls "s3://$BUCKET/db/" | awk '{print $4}' | while read f; do
+            d=$(echo "$f" | sed -E 's/mrluder-([0-9]{8}).*/\1/'); [ "$d" \< "$cutoff" ] && aws s3 rm "s3://$BUCKET/db/$f" || true
+          done
