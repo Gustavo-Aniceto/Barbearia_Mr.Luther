@@ -42,9 +42,11 @@ export function AgendaBoard({ mode }: { mode: 'admin' | 'barbeiro' }) {
       <div className="toolbar">
         <Tabs tabs={[{ id: 'dia', label: 'Dia' }, { id: 'semana', label: 'Semana' }, { id: 'mes', label: 'Mês' }]} value={view} onChange={setView} />
         <Button variant="line" size="sm" onClick={() => setDay(isoDay())}>Hoje</Button>
-        <button className="icon-btn" onClick={() => step(-1)} aria-label="Anterior"><Icon name="arrowLeft" /></button>
-        <button className="icon-btn" onClick={() => step(1)} aria-label="Próximo"><Icon name="arrowRight" /></button>
-        <strong className="first-cap">{view === 'mes' ? new Date(day + 'T12:00:00Z').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : view === 'semana' ? `${fmtDate(range[0] + 'T12:00:00Z', { day: '2-digit', month: 'short' })} – ${fmtDate(addDays(range[1], -1) + 'T12:00:00Z', { day: '2-digit', month: 'short' })}` : fmtLongDate(day + 'T12:00:00-03:00')}</strong>
+        <div className="date-nav">
+          <button className="icon-btn" onClick={() => step(-1)} aria-label="Anterior"><Icon name="arrowLeft" /></button>
+          <strong className="first-cap">{view === 'mes' ? new Date(day + 'T12:00:00Z').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : view === 'semana' ? `${fmtDate(range[0] + 'T12:00:00Z', { day: '2-digit', month: 'short' })} – ${fmtDate(addDays(range[1], -1) + 'T12:00:00Z', { day: '2-digit', month: 'short' })}` : fmtLongDate(day + 'T12:00:00-03:00')}</strong>
+          <button className="icon-btn" onClick={() => step(1)} aria-label="Próximo"><Icon name="arrowRight" /></button>
+        </div>
         <span className="spacer" />
         {mode === 'admin' && <Select value={barberFilter} onChange={(e) => setBarberFilter(e.target.value)} style={{ width: 'auto' }} aria-label="Filtrar profissional">
           <option value="">Todos os profissionais</option>{(barbers.data || []).map((b: any) => <option key={b.id} value={b.id}>{b.display_name}</option>)}</Select>}
