@@ -10,13 +10,13 @@ export function Logo({ compact = false, className = '' }: { compact?: boolean; c
   return (
     <svg className={`logo ${className}`} viewBox="0 0 300 150" role="img" aria-label="MR. LUDER Barbearia" style={compact ? { height: 40 } : undefined}>
       <line x1="18" y1="16" x2="282" y2="16" stroke="currentColor" strokeWidth="1.4" />
-      <text x="150" y="64" textAnchor="middle" fill="currentColor" className="logo-main">MR. LUDER</text>
+      <text x="150" y="64" textAnchor="middle" fill="currentColor" className="logo-main" textLength="258" lengthAdjust="spacingAndGlyphs">MR. LUDER</text>
       <line x1="18" y1="82" x2="112" y2="82" stroke="currentColor" strokeWidth="1.4" />
       <line x1="188" y1="82" x2="282" y2="82" stroke="currentColor" strokeWidth="1.4" />
       <text x="133" y="86.5" textAnchor="middle" fill="currentColor" className="logo-est">EST</text>
       <path d="M150 79 l3.6 3.6 l-3.6 3.6 l-3.6 -3.6z" fill="currentColor" />
       <text x="165" y="86.5" textAnchor="middle" fill="currentColor" className="logo-est">17</text>
-      <text x="150" y="128" textAnchor="middle" fill="currentColor" className="logo-sub">BARBEARIA</text>
+      <text x="150" y="128" textAnchor="middle" fill="currentColor" className="logo-sub" textLength="262" lengthAdjust="spacingAndGlyphs">BARBEARIA</text>
     </svg>
   );
 }
