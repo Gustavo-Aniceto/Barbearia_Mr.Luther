@@ -106,13 +106,12 @@ function PaymentSettings() {
   if (!v) return <Loading />;
   return (
     <section className="card" style={{ display: 'grid', gap: 16 }}>
-      <div className="notice"><Icon name="wallet" /><span>A integração está preparada para Mercado Pago ou Asaas (cobrança avulsa e recorrente). Antes de ativar, compare tarifas e funcionalidades atuais na documentação oficial de cada provedor. A <strong>chave secreta nunca é salva aqui</strong>: ela vai como segredo da Edge Function (veja docs/PAGAMENTOS.md). Dados de cartão nunca passam pelo banco da aplicação.</span></div>
+      <div className="notice"><Icon name="wallet" /><span>Pagamentos online pelo <strong>Asaas</strong>: o cliente paga planos e pedidos da loja por Pix, boleto ou cartão na fatura do Asaas, e o site confirma sozinho quando o pagamento entra (planos são ativados e renovados todo mês). A <strong>chave da API fica só na Vercel</strong> (ASAAS_API_KEY), nunca aqui. Dados de cartão nunca passam pelo site. Passo a passo em docs/PAGAMENTOS.md.</span></div>
       <div className="form-grid">
         <Field label="Provedor"><Select value={v.provider || ''} onChange={(e) => setV({ ...v, provider: e.target.value || null })}><option value="">Não definido</option><option value="mercado_pago">Mercado Pago</option><option value="asaas">Asaas</option></Select></Field>
-        <Field label="Ambiente"><Select value={v.environment} onChange={(e) => setV({ ...v, environment: e.target.value })}><option value="sandbox">Testes (sandbox)</option><option value="producao">Produção</option></Select></Field>
-        <Field label="Chave pública" className="span-2" hint="Somente a chave pública do provedor"><Input value={v.public_key || ''} onChange={(e) => setV({ ...v, public_key: e.target.value })} /></Field>
-      </div>
-      <Toggle checked={v.online_payments_enabled} onChange={(x) => setV({ ...v, online_payments_enabled: x })} label="Habilitar pagamentos online" hint="Só ative depois de publicar a Edge Function e testar no sandbox" />
+        <Field label="Ambiente" hint="Definido pela chave na Vercel: chaves $aact_prod_ cobram de verdade; $aact_hmlg_ são de teste"><Select value={v.environment} onChange={(e) => setV({ ...v, environment: e.target.value })}><option value="sandbox">Testes (sandbox)</option><option value="producao">Produção</option></Select></Field>
+              </div>
+      <Toggle checked={v.online_payments_enabled} onChange={(x) => setV({ ...v, online_payments_enabled: x })} label="Habilitar pagamentos online" hint="Mostra o botão Pagar online aos clientes. Exige o provedor Asaas e a chave configurada na Vercel." />
       <SaveBar onSave={async () => { await db.update('payment_settings', { id: 1 }, { provider: v.provider, environment: v.environment, public_key: v.public_key || null, online_payments_enabled: !!v.online_payments_enabled }); s.reload(); }} />
     </section>
   );

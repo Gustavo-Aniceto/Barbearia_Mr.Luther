@@ -145,8 +145,48 @@ function ReviewModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   );
 }
 
+// ------------------------------------------------------------------ Pagamento online (Asaas)
+let payEnabledCache: Promise<boolean> | null = null;
+function usePayOnline() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    payEnabledCache ??= fetch('/api/payments/checkout', { credentials: 'same-origin' }).then((r) => r.json()).then((j) => !!j.enabled).catch(() => false);
+    payEnabledCache.then(setOn);
+  }, []);
+  return on;
+}
+
+/** Gera a fatura no Asaas e leva o cliente até ela (Pix, boleto ou cartão). O CPF é pedido só na primeira vez. */
+function PayOnline({ kind, id, label = 'Pagar online' }: { kind: 'plano' | 'pedido'; id: string; label?: string }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [askCpf, setAskCpf] = useState(false);
+  const [cpf, setCpf] = useState('');
+  const [err, setErr] = useState('');
+  const go = async (withCpf?: string) => {
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/payments/checkout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, id, cpf: withCpf }) });
+      const j = await res.json().catch(() => ({}));
+      if (j.needCpf) { setAskCpf(true); if (withCpf) setErr(j.message); }
+      else if (!res.ok || !j.url) toast.error(j.message || 'Não foi possível gerar o pagamento');
+      else window.location.assign(j.url);
+    } catch { toast.error('Sem conexão. Tente de novo.'); }
+    setBusy(false);
+  };
+  return (<>
+    <Button size="sm" loading={busy && !askCpf} onClick={() => go()}><Icon name="wallet" size={16} /> {label}</Button>
+    <Modal open={askCpf} onClose={() => setAskCpf(false)} title="CPF do pagador"
+      footer={<><Button variant="ghost" onClick={() => setAskCpf(false)}>Voltar</Button><Button loading={busy} onClick={() => go(cpf)}>Continuar para o pagamento</Button></>}>
+      <p className="muted" style={{ marginBottom: 12 }}>O Asaas, que processa o pagamento, exige o CPF de quem paga. Ele é enviado só ao Asaas e não fica guardado no site. Você escolhe Pix, boleto ou cartão na próxima tela.</p>
+      <Field label="CPF" error={err}><Input inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(e.target.value)} /></Field>
+    </Modal>
+  </>);
+}
+
 // ------------------------------------------------------------------ Pedidos
 function Orders() {
+  const payOn = usePayOnline();
   const { data, error, loading, reload } = useLoad(async () => {
     const orders = await db.select('orders', {}, { order: 'created_at.desc' });
     const items = orders.length ? await db.select('order_items', { order_id: `in.(${orders.map((o: any) => o.id).join(',')})` }) : [];
@@ -160,7 +200,10 @@ function Orders() {
       <div><h3>Pedido #{o.code}</h3>
         <div className="muted" style={{ fontSize: 14 }}>{fmtDateTime(o.created_at)} · {o.items.map((i: any) => `${i.quantity}× ${i.product_name}`).join(', ')}</div>
         <div style={{ marginTop: 6 }}><Badge tone={o.status === 'cancelado' ? 'muted' : o.status === 'aguardando_pagamento' ? 'warn' : 'ok'}>{ORDER_STATUS[o.status]}</Badge> <span className="cell-sub">{o.fulfillment === 'retirada' ? 'Retirada na barbearia' : 'Entrega'}</span></div></div>
-      <strong>{money(o.total)}</strong>
+      <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
+        <strong>{money(o.total)}</strong>
+        {payOn && o.status === 'aguardando_pagamento' && <PayOnline kind="pedido" id={o.id} />}
+      </div>
     </div>
   ));
   return (<>
@@ -178,6 +221,8 @@ function Plans() {
   const { data, error, loading, reload } = useLoad(() => db.rpc<any[]>('my_subscriptions'));
   const want = site?.plans.find((p) => p.id === q.get('assinar'));
   const [busy, setBusy] = useState(false);
+  const payOn = usePayOnline();
+  useEffect(() => { if (q.get('pago')) toast.ok('Pagamento enviado. Assim que o Asaas confirmar, seu plano é ativado e você recebe um e-mail.'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   if (loading || !site) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={reload} />;
   return (<>
@@ -186,10 +231,12 @@ function Plans() {
         <h2>Contratar {want.name}</h2>
         <p>{money(want.price)} por {want.period_months === 1 ? 'mês' : `${want.period_months} meses`}.</p>
         {want.contract_conditions && <p className="muted" style={{ whiteSpace: 'pre-line', marginTop: 8 }}>{want.contract_conditions}</p>}
-        <div className="notice" style={{ margin: '14px 0' }}><Icon name="wallet" /><span>O pagamento online será habilitado quando o gateway (Mercado Pago ou Asaas) for configurado. Por enquanto, a assinatura é ativada após o pagamento na barbearia.</span></div>
+        <div className="notice" style={{ margin: '14px 0' }}><Icon name="wallet" /><span>{payOn
+          ? 'Depois de confirmar, toque em "Pagar online" e escolha Pix, boleto ou cartão. Todo mês a nova fatura chega por e-mail. Se preferir, pague na barbearia.'
+          : 'A assinatura é ativada após o pagamento na barbearia.'}</span></div>
         <Button loading={busy} onClick={async () => {
           setBusy(true);
-          try { await db.rpc('subscribe_plan', { p_plan: want.id }); toast.ok('Assinatura registrada. Ative pagando na barbearia.'); history.replaceState(null, '', '/conta?aba=planos'); reload(); } catch (e) { toast.error((e as Error).message); }
+          try { await db.rpc('subscribe_plan', { p_plan: want.id }); toast.ok(payOn ? 'Plano registrado. Agora é só pagar online.' : 'Assinatura registrada. Ative pagando na barbearia.'); history.replaceState(null, '', '/conta?aba=planos'); reload(); } catch (e) { toast.error((e as Error).message); }
           setBusy(false);
         }}>Confirmar contratação</Button>
       </section>
@@ -205,12 +252,15 @@ function Plans() {
               {s.benefits.map((b: any, i: number) => <li key={i}><span>{b.description}</span><span className="cell-sub">{b.service_id ? (b.quantity ? `${b.used} de ${b.quantity} usados` : `${b.used} usados · ilimitado`) : ''}</span></li>)}
             </ul>
           </div>
+          <div style={{ display: 'grid', gap: 8, justifyItems: 'end', alignContent: 'start' }}>
+          {payOn && ['pendente', 'inadimplente'].includes(s.status) && <PayOnline kind="plano" id={s.id} label={s.status === 'inadimplente' ? 'Pagar mensalidade' : 'Pagar online'} />}
           {['ativa', 'pendente', 'inadimplente'].includes(s.status) && s.auto_renew && (
             <Button size="sm" variant="ghost" onClick={async () => {
               if (!(await confirm({ title: 'Cancelar plano?', text: s.status === 'ativa' ? `Os benefícios continuam até ${fmtDate(s.period_end)} e o plano não será renovado.` : 'A contratação será cancelada.', confirm: 'Cancelar plano', danger: true }))) return;
               try { await db.rpc('set_subscription_status', { p_sub: s.id, p_status: 'cancelada' }); toast.ok('Renovação cancelada'); reload(); } catch (e) { toast.error((e as Error).message); }
             }}>Cancelar</Button>
           )}
+          </div>
         </div>
       ))}
     </section>

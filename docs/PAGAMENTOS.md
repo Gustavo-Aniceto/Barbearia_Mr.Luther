@@ -1,39 +1,48 @@
-# Pagamentos online e assinaturas recorrentes
+# Pagamentos online (Asaas)
 
-## Situação atual
+O cliente paga **planos mensais** e **pedidos da loja** pela fatura do Asaas, escolhendo **Pix, boleto ou cartão**.
+O site confirma sozinho quando o pagamento entra. Pagamentos no balcão continuam funcionando como antes.
 
-- Pagamentos são **registrados manualmente** no balcão (dinheiro, Pix, cartão e formas configuráveis). Faturado, recebido e a receber ficam separados.
-- Assinaturas nascem como "aguardando pagamento" e são ativadas quando o pagamento é registrado.
-- A integração com gateway está **preparada**, mas não ativada:
-  - `public.gateway_confirm_payment(...)`: confirma um pagamento vindo do gateway de forma idempotente (só o servidor pode chamar);
-  - `app/api/webhooks/payments`: rota que recebe o webhook do Asaas ou do Mercado Pago e chama essa função;
-  - `payment_settings`: provedor, ambiente e chave **pública**. Chaves secretas nunca vão para o banco nem para o navegador.
+## Como funciona
 
-## Comparação (verificar tarifas atuais antes de contratar)
+| Etapa | O que acontece |
+|---|---|
+| Cliente contrata um plano | Plano fica "aguardando pagamento" e aparece o botão **Pagar online** (Área do cliente → Planos) |
+| Primeiro pagamento online | O site cadastra o pagador no Asaas (pede o CPF uma única vez, que **não** fica guardado no site), cria a **assinatura recorrente** e abre a fatura |
+| Pagamento confirmado | O Asaas avisa o site (webhook) → o lançamento é baixado, o plano fica **ativo** por 1 ciclo, a comissão/indicação é processada e o cliente recebe e-mail |
+| Todo mês | O Asaas gera a nova fatura e envia ao cliente. Pagou → o plano renova. Venceu sem pagar → plano fica **inadimplente** (benefícios suspensos) até o pagamento |
+| Cliente cancela no site | A renovação é desligada aqui e a assinatura é **removida no Asaas** (para de gerar faturas). Benefícios já pagos valem até o fim do período |
+| Pedido da loja | Botão **Pagar online** em Área do cliente → Pedidos, enquanto o pedido aguarda pagamento. Pago → estoque baixa e o pedido segue |
 
-| | Asaas | Mercado Pago |
-|---|---|---|
-| Recorrência via API | Assinaturas com boleto, Pix ou cartão; gera as cobranças automaticamente | API de assinaturas (`/preapproval`), com ou sem plano associado |
-| Cartão recusado | Cobrança automática no vencimento enquanto o cartão for válido | Novas tentativas automáticas (até 4, numa janela de 10 dias) |
-| Pix recorrente | Pix Automático e Pix Recorrente documentados | Pix disponível nos meios de pagamento |
-| Webhook | Eventos de cobrança/assinatura com token no header | Notificação com id; consultar o pagamento na API |
-| Tarifas | Página de parceiros mostra valores por cobrança recebida (promocionais, variam por plano) | Consultar a página oficial de taxas |
+Garantias:
+- Cada pagamento do Asaas só é contado **uma vez**, mesmo se o aviso chegar repetido (`payment_transactions.gateway_reference`).
+- O webhook só é aceito com o token secreto (`asaas-access-token`), conferido em tempo constante.
+- Número de cartão, validade e CVV são digitados **somente na página do Asaas**.
 
-**Recomendação inicial:** o **Asaas** encaixa melhor no modelo de planos mensais da barbearia, pois cobra por boleto, Pix ou cartão no mesmo fluxo de assinatura e tem lembretes automáticos de cobrança. O **Mercado Pago** é vantajoso se os clientes já usam a conta Mercado Pago. Decida após comparar as tarifas vigentes no contrato.
+Código: `lib/server/asaas.ts`, `app/api/payments/checkout`, `app/api/payments/setup`, `app/api/webhooks/payments`,
+`lib/server/payments.ts` e a migration `0010_asaas.sql`.
+
+## Configuração (uma vez)
+
+1. **Conta Asaas** em asaas.com, aprovada (envio de documentos).
+2. **Chave de API:** Asaas → menu do usuário → **Integrações → Chaves de API → Gerar chave**.
+   Chaves `$aact_prod_…` cobram de verdade; `$aact_hmlg_…` são do ambiente de testes (sandbox.asaas.com). O site detecta o ambiente pela chave.
+3. **Na Vercel** (projeto `mrluder-barbearia` → Settings → Environment Variables, Production):
+   - `ASAAS_API_KEY` = a chave (marque **Sensitive**). Nunca envie a chave por chat, e-mail ou GitHub.
+   - `PAYMENT_PROVIDER=asaas` e `ASAAS_WEBHOOK_TOKEN` (segredo aleatório de 32+ caracteres) — já configurados.
+4. **Novo deploy** e registro do webhook: `POST /api/payments/setup` com `Authorization: Bearer <CRON_SECRET>`
+   (cria o webhook no Asaas apontando para `/api/webhooks/payments`, com o token; pode repetir sem duplicar).
+5. **Admin → Configurações → Pagamentos online:** provedor **Asaas**, ambiente, e ligar **Habilitar pagamentos online**.
+6. **Teste:** contrate um plano com a sua conta, pague R$ via Pix e confira o plano ficar ativo.
+
+## Tarifas
+
+Conferir na conta Asaas (variam por plano e promoções). Referência pública em 11/2026: Pix e boleto R$ 1,99 por cobrança recebida;
+cartão de crédito à vista R$ 0,49 + 2,99%; crédito do cartão liberado 32 dias após a confirmação (antecipação opcional).
 
 Fontes:
-- Asaas — Assinaturas (API): https://docs.asaas.com/reference/assinaturas-1.md
-- Asaas — FAQ Assinaturas: https://docs.asaas.com/docs/faq-assinaturas
-- Mercado Pago — API de Assinaturas: https://www.mercadopago.com.br/developers/pt/reference/online-payments/subscriptions/overview
-- Mercado Pago — Assinaturas (visão geral): https://www.mercadopago.com.br/developers/pt/guides/online-payments/subscriptions/introduction
-
-## Para ativar
-
-1. Criar conta no provedor e obter as credenciais de **sandbox**.
-2. Na Vercel, cadastrar `PAYMENT_PROVIDER=asaas` e `ASAAS_WEBHOOK_TOKEN` (ou `MERCADOPAGO_ACCESS_TOKEN`).
-3. Cadastrar no painel do provedor a URL `https://<seu-dominio>/api/webhooks/payments`.
-4. Implementar a rota `app/api/payments/charge`, que cria a cobrança/assinatura no provedor com `externalReference = transactions.id` e devolve o link de pagamento ao site. A Área do Cliente › Planos já indica onde o botão de pagar online entra.
-5. Testar no sandbox: pagamento aprovado, recusado e webhook duplicado.
-6. Em Configurações › Pagamentos online, escolher o provedor e ativar.
-
-Nunca armazene número de cartão, CVV ou validade. O cartão é digitado no checkout do provedor.
+- Asaas — autenticação e ambientes: https://docs.asaas.com/docs/autenticação
+- Asaas — criar assinatura: https://docs.asaas.com/reference/criar-nova-assinatura
+- Asaas — criar cobrança: https://docs.asaas.com/reference/criar-nova-cobranca
+- Asaas — criar cliente: https://docs.asaas.com/reference/criar-novo-cliente
+- Asaas — webhooks: https://docs.asaas.com/docs/criar-novo-webhook-pela-api e https://docs.asaas.com/docs/webhook-para-cobrancas

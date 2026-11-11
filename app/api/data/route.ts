@@ -4,6 +4,7 @@ import { executeData, toHttpError, type DataRequest } from '@/lib/server/data-ap
 import { getIdentity } from '@/lib/server/identity';
 import { sameOrigin } from '@/lib/server/http';
 import { dispatchNotifications } from '@/lib/server/notify';
+import { cancelGatewaySubscription } from '@/lib/server/payments';
 
 // Operações que geram avisos ao cliente: o envio acontece logo depois da resposta, sem atrasá-la.
 const NOTIFYING = new Set(['book_appointment', 'cancel_appointment', 'reschedule_appointment', 'set_appointment_status',
@@ -21,6 +22,11 @@ export async function POST(req: Request) {
     const data = await asUser(me?.profileId ?? null, (c) => executeData(c, body));
     if (body.op === 'rpc' && NOTIFYING.has(String((body as { fn?: string }).fn))) {
       after(() => dispatchNotifications().catch((e) => console.error('notificações:', e)));
+    }
+    // Plano cancelado no site: encerra também a recorrência no Asaas (para de gerar faturas).
+    if (body.op === 'rpc' && body.fn === 'set_subscription_status' && ['cancelada', 'expirada'].includes(String(body.args?.p_status))) {
+      const subId = String(body.args?.p_sub || '');
+      after(() => cancelGatewaySubscription(subId).catch((e) => console.error('asaas cancelamento:', e)));
     }
     return NextResponse.json({ data }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
