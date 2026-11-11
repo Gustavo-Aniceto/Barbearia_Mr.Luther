@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Link, money, duration, WEEKDAYS, whatsappLink, useAuth, navigate, usePath } from '../lib/core';
 import { Logo, Diamond, Stars, Icon, Button, Empty, Loading, ErrorBox, useToast } from '../lib/ui';
 import { useSite, useCart, Hours } from './data';
+import { InstallBanner, InstallLink, useInstall } from '../lib/install';
 
 // ------------------------------------------------------------------ Estrutura do site
 export function SiteHeader() {
@@ -34,6 +35,7 @@ export function SiteHeader() {
 export function SiteFooter() {
   const { site } = useSite();
   const s = site?.settings || {};
+  const { canInstall } = useInstall();
   return (
     <footer className="site-footer">
       <div className="wrap footer-grid">
@@ -57,6 +59,7 @@ export function SiteFooter() {
             <li><Link to="/privacidade">Política de privacidade</Link></li>
             <li><Link to="/termos">Termos de uso</Link></li>
             <li><Link to="/meus-dados">Privacidade e meus dados</Link></li>
+            {canInstall && <li><InstallLink /></li>}
           </ul>
         </div>
       </div>
@@ -69,7 +72,7 @@ export function SiteFooter() {
 }
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
-  return (<><a href="#conteudo" className="sr-only">Pular para o conteúdo</a><SiteHeader /><main id="conteudo">{children}</main><SiteFooter /><MobileCta /></>);
+  return (<><a href="#conteudo" className="sr-only">Pular para o conteúdo</a><InstallBanner /><SiteHeader /><main id="conteudo">{children}</main><SiteFooter /><MobileCta /></>);
 }
 
 /** Celular: "Agendar" e WhatsApp sempre ao alcance do polegar nas páginas de navegação do site. */
