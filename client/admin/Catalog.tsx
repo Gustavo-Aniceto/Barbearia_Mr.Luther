@@ -1,9 +1,10 @@
 'use client';
 import React, { useState } from 'react';
 import { db } from '../lib/api';
-import { ORDER_STATUS, SUB_STATUS, duration, fmtDate, fmtDateTime, money, useAuth, useLoad } from '../lib/core';
+import { ORDER_STATUS, SUB_STATUS, WEEKDAYS, duration, fmtDate, fmtDateTime, money, useAuth, useLoad } from '../lib/core';
 import { Badge, Button, Empty, ErrorBox, Field, Icon, Input, Loading, Modal, MoneyInput, Pager, SearchBox, Select, Tabs, useConfirm, useTable, useToast } from '../lib/ui';
 import { EntityModal, exportCsv, usePaymentMethods } from '../panel/Layout';
+import { ExpiringPlansCard, FixedSlotsCard } from '../panel/FixedSlots';
 
 // ------------------------------------------------------------------ Serviços
 export function Services() {
@@ -270,7 +271,7 @@ export function Plans() {
   const toast = useToast();
   const confirm = useConfirm();
   const pms = usePaymentMethods();
-  const [tab, setTab] = useState<'planos' | 'assinaturas'>('planos');
+  const [tab, setTab] = useState<'planos' | 'assinaturas' | 'fixos'>('planos');
   const plans = useLoad(() => db.select('plans', {}, { order: 'sort_order.asc' }));
   const benefits = useLoad(() => db.select('plan_benefits'));
   const services = useLoad(() => db.select('services', { active: true }));
@@ -282,8 +283,8 @@ export function Plans() {
   const [subStatus, setSubStatus] = useState('');
   return (
     <>
-      <Tabs tabs={[{ id: 'planos', label: 'Planos', count: plans.data?.length }, { id: 'assinaturas', label: 'Assinaturas', count: subs.data?.filter((s: any) => s.status === 'ativa').length }]} value={tab} onChange={setTab} />
-      {tab === 'planos' ? (
+      <Tabs tabs={[{ id: 'planos', label: 'Planos', count: plans.data?.length }, { id: 'assinaturas', label: 'Assinaturas', count: subs.data?.filter((s: any) => s.status === 'ativa').length }, { id: 'fixos', label: 'Horários fixos' }]} value={tab} onChange={setTab} />
+      {tab === 'fixos' ? <><FixedSlotsCard showBarber /><ExpiringPlansCard /></> : tab === 'planos' ? (
         <>
           <div className="toolbar"><div className="notice" style={{ flex: 1 }}><Icon name="wallet" /><span>Cobrança recorrente automática depende do gateway (Mercado Pago ou Asaas) — veja Configurações › Pagamentos. Até lá, as assinaturas são ativadas ao registrar o pagamento.</span></div>
             {can('planos.criar') && <Button size="sm" onClick={() => setEdit({ active: true, period_months: '1', product_discount_percent: 0, sort_order: 0 })}>Novo plano</Button>}</div>
@@ -323,8 +324,11 @@ export function Plans() {
           { key: 'period_months', label: 'Periodicidade', type: 'select', required: true, options: [{ value: '1', label: 'Mensal' }, { value: '3', label: 'Trimestral' }, { value: '6', label: 'Semestral' }, { value: '12', label: 'Anual' }] },
           { key: 'product_discount_percent', label: 'Desconto em produtos (%)', type: 'number', min: 0, max: 100 }, { key: 'max_active_subscriptions', label: 'Limite de assinantes', type: 'number', min: 1, hint: 'Vazio = sem limite' },
           { key: 'sort_order', label: 'Ordem', type: 'number' }, { key: 'description', label: 'Descrição', type: 'textarea' }, { key: 'usage_rules', label: 'Regras de utilização', type: 'textarea' },
+          { key: 'max_per_week', label: 'Limite por semana', type: 'number', min: 1, max: 14, hint: 'Ex.: 1 = um atendimento por semana. Vazio = sem limite' },
           { key: 'contract_conditions', label: 'Condições de contratação', type: 'textarea' }, { key: 'active', label: 'Ativo (visível no site)', type: 'toggle' }]}
-        onSave={async (v) => { const row = { name: v.name, price: v.price, period_months: Number(v.period_months), product_discount_percent: v.product_discount_percent ?? 0, max_active_subscriptions: v.max_active_subscriptions, sort_order: v.sort_order ?? 0, description: v.description, usage_rules: v.usage_rules, contract_conditions: v.contract_conditions, active: !!v.active };
+        extra={(v, set) => <WeekdayPicker value={v.allowed_weekdays} onChange={(d) => set('allowed_weekdays', d)} />}
+        onSave={async (v) => { const wd: number[] | null = v.allowed_weekdays && v.allowed_weekdays.length && v.allowed_weekdays.length < 7 ? v.allowed_weekdays : null;
+          const row = { name: v.name, price: v.price, period_months: Number(v.period_months), product_discount_percent: v.product_discount_percent ?? 0, max_active_subscriptions: v.max_active_subscriptions, sort_order: v.sort_order ?? 0, description: v.description, usage_rules: v.usage_rules, contract_conditions: v.contract_conditions, active: !!v.active, allowed_weekdays: wd, max_per_week: v.max_per_week ?? null };
           edit.id ? await db.update('plans', { id: edit.id }, row) : await db.insert('plans', row); toast.ok('Plano salvo'); plans.reload(); }} />
       <EntityModal open={!!ben} onClose={() => setBen(null)} title="Benefício do plano" initial={ben || {}}
         fields={[{ key: 'service_id', label: 'Serviço incluído', type: 'select', options: (services.data || []).map((s: any) => ({ value: s.id, label: s.name })), hint: 'Deixe vazio para benefício apenas descritivo' },
@@ -332,5 +336,20 @@ export function Plans() {
         onSave={async (v) => { await db.insert('plan_benefits', { plan_id: ben.plan_id, service_id: v.service_id || null, quantity_per_period: v.quantity_per_period, description: v.description }); benefits.reload(); }} />
       {pay && <ReceiveModal title="Receber assinatura" pms={pms} onClose={() => setPay(null)} onConfirm={async (pm) => { await db.rpc('receive_payment', { p_ref_type: 'assinatura', p_ref_id: pay.id, p_payment_method_id: pm }); toast.ok('Assinatura ativa'); subs.reload(); }} />}
     </>
+  );
+}
+
+/** Dias da semana em que o plano pode ser usado (nenhum marcado = todos os dias). */
+function WeekdayPicker({ value, onChange }: { value: number[] | null | undefined; onChange: (d: number[]) => void }) {
+  const sel = value && value.length ? value : [0, 1, 2, 3, 4, 5, 6];
+  return (
+    <fieldset className="weekday-picker">
+      <legend>Dias em que o plano vale</legend>
+      <div>{WEEKDAYS.map((w, i) => (
+        <label key={i} className="chip-check"><input type="checkbox" checked={sel.includes(i)}
+          onChange={(e) => onChange((e.target.checked ? [...sel, i] : sel.filter((x) => x !== i)).sort((a, b) => a - b))} />{w.slice(0, 3)}</label>
+      ))}</div>
+      <small className="muted">Ex.: segunda a quinta para planos com preço menor. Todos marcados = vale qualquer dia.</small>
+    </fieldset>
   );
 }

@@ -5,6 +5,7 @@ import { APPT_STATUS, WEEKDAYS, addDays, fmtDate, fmtDateTime, fmtTime, isoDay, 
 import { Badge, Button, Empty, ErrorBox, Field, Input, Loading, Modal, Select, Textarea, useConfirm, useToast } from '../lib/ui';
 import { AgendaBoard, EventModal } from './Agenda';
 import { PanelLayout, RequireStaff, NavItem } from './Layout';
+import { ExpiringPlansCard, FixedSlotsCard } from './FixedSlots';
 
 const NAV: NavItem[] = [
   { to: '/barbeiro', label: 'Hoje', icon: 'clock' }, { to: '/barbeiro/agenda', label: 'Minha agenda', icon: 'calendar', short: 'Agenda' },
@@ -76,6 +77,8 @@ function Today() {
             ))}</tbody></table></div>
         )}
       </section>
+      <FixedSlotsCard />
+      <ExpiringPlansCard />
       {sel && <EventModal ev={sel} mode="barbeiro" onClose={() => setSel(null)} onChanged={() => { setSel(null); evs.reload(); metrics.reload(); }} />}
     </>
   );

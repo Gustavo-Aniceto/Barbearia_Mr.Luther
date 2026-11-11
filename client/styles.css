@@ -669,3 +669,32 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 @media (display-mode: standalone) {
   .site-header { padding-top: env(safe-area-inset-top); }
 }
+
+/* ---------------------------------------------------------------- Horário fixo dos planos */
+.fixed-slot { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--white); display: grid; gap: 10px; }
+.fixed-slot-head { display: flex; gap: 12px; align-items: flex-start; }
+.fixed-slot-head > svg { flex-shrink: 0; margin-top: 2px; color: var(--moss); }
+.fixed-slot-head > div { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.fixed-slot-head .muted { font-size: 14px; }
+.fixed-slot-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
+.fixed-slot-form .field-error, .fixed-slot-actions { grid-column: 1 / -1; }
+.fixed-slot-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.slot-requests { list-style: none; margin: 0; padding: 0; display: grid; }
+.slot-requests li { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid var(--line); }
+.slot-requests li:first-child { border-top: 0; }
+.slot-requests li.is-pending { background: color-mix(in srgb, var(--warn) 7%, transparent); margin: 0 -16px; padding: 14px 16px; border-radius: var(--radius-m); }
+.slot-requests-main { display: grid; gap: 2px; min-width: 0; }
+.slot-requests-main .muted { font-size: 13.5px; }
+.slot-requests-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.weekday-picker { grid-column: 1 / -1; border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.weekday-picker legend { font-size: 13px; font-weight: 600; margin-bottom: 6px; padding: 0; }
+.weekday-picker > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-check { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; cursor: pointer; min-height: 40px; }
+.chip-check:has(input:checked) { background: var(--moss); border-color: var(--moss); color: var(--paper); }
+.chip-check input { accent-color: var(--paper); }
+@media (max-width: 640px) {
+  .slot-requests li { flex-direction: column; align-items: stretch; }
+  .slot-requests-actions { justify-content: flex-start; }
+  .slot-requests-actions .btn { flex: 1; }
+  .fixed-slot-actions .btn { flex: 1; }
+}
