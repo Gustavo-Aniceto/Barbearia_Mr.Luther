@@ -4,13 +4,17 @@ import { db } from '../lib/api';
 import { Link, navigate, useAuth, usePath } from '../lib/core';
 import { Button, Empty, Field, Icon, ImageInput, Input, Loading, Logo, Modal, MoneyInput, Select, Textarea, Toggle, useToast } from '../lib/ui';
 
-export type NavItem = { to: string; label: string; icon: string; perm?: string; group?: string };
+export type NavItem = { to: string; label: string; icon: string; perm?: string; group?: string; short?: string };
 
-export function PanelLayout({ nav, title, actions, children, subtitle }: { nav: NavItem[]; title: string; subtitle?: string; actions?: React.ReactNode; children: React.ReactNode }) {
+/** No celular, os painéis têm uma barra fixa embaixo (como num app) com os atalhos principais + "Mais". */
+export function PanelLayout({ nav, title, actions, children, subtitle, tabs }: { nav: NavItem[]; title: string; subtitle?: string; actions?: React.ReactNode; children: React.ReactNode; tabs?: string[] }) {
   const { access, signOut, session } = useAuth();
   const path = usePath();
   const [open, setOpen] = useState(false);
   let lastGroup = '';
+  const isActive = (to: string) => to === path || (to !== '/admin' && to !== '/barbeiro' && path.startsWith(to));
+  const tabItems = (tabs ? tabs.map((t) => nav.find((n) => n.to === t)).filter(Boolean) as NavItem[] : nav.slice(0, 3)).slice(0, 4);
+  const moreActive = !tabItems.some((t) => isActive(t.to));
   return (
     <div className="app">
       <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Menu do painel">
@@ -19,7 +23,7 @@ export function PanelLayout({ nav, title, actions, children, subtitle }: { nav: 
           {nav.map((n) => {
             const head = n.group && n.group !== lastGroup ? <div className="sidebar-group" key={`g-${n.group}`}>{n.group}</div> : null;
             if (n.group) lastGroup = n.group;
-            const active = n.to === path || (n.to !== '/admin' && n.to !== '/barbeiro' && path.startsWith(n.to));
+            const active = isActive(n.to);
             return <React.Fragment key={n.to}>{head}<Link to={n.to} aria-current={active ? 'page' : undefined} onClick={() => setOpen(false)}><Icon name={n.icon} size={17} />{n.label}</Link></React.Fragment>;
           })}
         </nav>
@@ -39,6 +43,10 @@ export function PanelLayout({ nav, title, actions, children, subtitle }: { nav: 
         </header>
         <div className="content">{children}</div>
       </div>
+      <nav className="tabbar" aria-label="Atalhos do painel">
+        {tabItems.map((t) => <Link key={t.to} to={t.to} aria-current={isActive(t.to) ? 'page' : undefined}><Icon name={t.icon} size={20} /><span>{t.short || t.label}</span></Link>)}
+        <button onClick={() => setOpen(true)} aria-current={moreActive ? 'page' : undefined} aria-label="Mais opções do menu"><Icon name="menu" size={20} /><span>Mais</span></button>
+      </nav>
     </div>
   );
 }

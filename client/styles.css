@@ -488,7 +488,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .agenda-day { display: grid; grid-template-columns: 60px repeat(var(--cols, 1), minmax(180px, 1fr)); overflow-x: auto; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-m); }
 .agenda-head { position: sticky; top: 0; background: var(--paper); padding: 10px; font-weight: 600; font-size: 13.5px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); z-index: 2; }
 .agenda-col { position: relative; border-left: 1px solid var(--line); }
-.agenda-hour { height: 64px; border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--ink-soft); padding: 4px 8px; text-align: right; }
+.agenda-hour { height: 64px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--ink-soft); padding: 4px 8px; text-align: right; }
 .agenda-slot-line { height: 64px; border-bottom: 1px solid var(--line); }
 .ev { position: absolute; left: 4px; right: 4px; border-radius: var(--radius-s); padding: 6px 8px; font-size: 12.5px; overflow: hidden; cursor: pointer; border: 0; text-align: left; background: var(--moss-tint); border-left: 3px solid var(--moss); }
 .ev:hover { filter: brightness(.97); }
@@ -548,3 +548,88 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .app .chip[aria-pressed='true'], .app .chip:hover { background: var(--moss); color: var(--paper); border-color: var(--moss); }
 .earn-hero { display: grid; gap: 6px; }
 .earn-total { font-size: clamp(34px, 7vw, 52px); font-stretch: 112%; font-variant-numeric: tabular-nums; line-height: 1.05; color: var(--moss-deep); }
+
+/* =====================================================================
+   CELULAR — uso com uma mão (prioridade: a maioria acessa pelo celular)
+   ===================================================================== */
+.tabbar, .mobile-cta, .mobile-cta-space { display: none; }
+
+/* Alvos de toque de pelo menos 44 px; campos com 16 px (evita o zoom automático do iPhone) */
+@media (pointer: coarse), (max-width: 760px) {
+  .icon-btn { width: 44px; height: 44px; flex-shrink: 0; }
+  .btn-sm { min-height: 40px; padding: 8px 14px; font-size: 14px; }
+  .btn-md { min-height: 46px; }
+  .chip { min-height: 40px; }
+  .text-link { display: inline-block; padding: 10px 0; }
+  .input, select.input, textarea.input, .input-affix .input { font-size: 16px; }
+  .site-footer a { display: inline-block; padding: 9px 0; }
+  .sidebar nav a { padding: 12px 10px; font-size: 15px; }
+  .sidebar-group { font-size: 12px; }
+  .sidebar-foot a, .sidebar-foot button { padding: 10px 0; font-size: 14px; }
+  .account-nav button { min-height: 44px; }
+  .check, .consent label { min-height: 40px; align-items: center; }
+  input[type='checkbox'], input[type='radio'] { width: 20px; height: 20px; }
+}
+
+@media (max-width: 760px) {
+  /* Site: Agendar + WhatsApp fixos embaixo */
+  .mobile-cta-space { display: block; height: calc(76px + env(safe-area-inset-bottom)); background: var(--black); }
+  .mobile-cta { display: flex; gap: 10px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(17,17,17,.94); backdrop-filter: blur(10px); border-top: 1px solid var(--line-dark); }
+  .mobile-cta .btn-primary { flex: 1; }
+  .mobile-cta-wa { width: 56px; padding: 0; background: #1f7a4d; color: #fff; }
+  .hero-actions .btn { width: 100%; }
+
+  /* Agendamento: total + Continuar sempre visíveis no rodapé da tela */
+  .steps li { min-width: 0; font-size: 12.5px; }
+  .booking .summary { position: sticky; bottom: 0; top: auto; z-index: 30; margin: 0 -20px; border-radius: 18px 18px 0 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); gap: 10px; grid-template-columns: 1fr 1fr; box-shadow: 0 -8px 24px rgba(0,0,0,.18); }
+  .booking .summary h2, .booking .summary dl, .booking .summary .muted { display: none; }
+  .booking .summary-total { grid-column: 1 / -1; padding-top: 0; border-top: 0; }
+  .booking .summary .btn { grid-column: 1 / -1; }
+  .booking .summary .btn-ghost { grid-column: auto; order: -1; }
+  .booking .summary .btn-ghost + .muted { display: none; }
+}
+
+@media (max-width: 960px) {
+  /* Painéis: barra de atalhos fixa embaixo, como em app */
+  .tabbar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--white); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -4px 18px rgba(17,17,17,.06); }
+  .tabbar a, .tabbar button { display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 58px; padding: 6px 4px;
+    background: none; border: 0; color: var(--ink-soft); text-decoration: none; font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+  .tabbar [aria-current='page'] { color: var(--moss); }
+  .tabbar [aria-current='page'] svg { transform: translateY(-1px); }
+  .main { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+  .topbar { padding-top: 12px; padding-bottom: 12px; }
+  .topbar .mobile-menu { display: none; }
+}
+
+/* Tabelas viram cartões no celular (rótulo de cada coluna vem do data-label) */
+@media (max-width: 640px) {
+  .table-wrap { margin: 0; padding: 0; overflow: visible; }
+  table.table:not(.perm-matrix), table.table:not(.perm-matrix) tbody, table.table:not(.perm-matrix) tr, table.table:not(.perm-matrix) td { display: block; width: 100%; }
+  table.table:not(.perm-matrix) thead { display: none; }
+  table.table:not(.perm-matrix) tr { border: 1px solid var(--line); border-radius: var(--radius-s); padding: 10px 14px; margin-bottom: 10px; background: var(--white); }
+  table.table:not(.perm-matrix) td { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 5px 0; border: 0; text-align: right; white-space: normal; }
+  table.table:not(.perm-matrix) td::before { content: attr(data-label); flex: 0 0 38%; text-align: left; font-size: 13px; color: var(--ink-soft); font-weight: 400; }
+  table.table:not(.perm-matrix) td[data-label='']::before { display: none; }
+  table.table:not(.perm-matrix) td:first-child { display: block; text-align: left; font-weight: 600; font-size: 15.5px; padding-bottom: 6px; }
+  table.table:not(.perm-matrix) td:first-child::before { display: none; }
+  table.table:not(.perm-matrix) td.actions { justify-content: flex-start; flex-wrap: wrap; padding-top: 8px; }
+  table.table:not(.perm-matrix) td.actions::before { display: none; }
+  table.table:not(.perm-matrix) tbody tr:hover td { background: none; }
+  .perm-matrix { font-size: 13px; }
+  .card { padding: 16px; }
+}
+@media (pointer: coarse), (max-width: 760px) {
+  .site-footer a { padding: 11px 0; }
+  .hero-strip a, .contact-list a { display: inline-block; padding: 10px 0; }
+  .header-actions .icon-btn { min-width: 44px; }
+}
+.date-nav { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.date-nav strong { min-width: 0; text-align: center; }
+@media (max-width: 760px) {
+  .date-nav { order: -1; width: 100%; justify-content: space-between; }
+  .date-nav strong { flex: 1; font-size: 15px; }
+  .toolbar > select.input { flex: 1 1 100%; }
+}

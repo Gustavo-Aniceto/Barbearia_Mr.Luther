@@ -13,7 +13,7 @@ import { Compliance, Audit } from './Compliance';
 import { Settings, SiteContent } from './Settings';
 
 const NAV: NavItem[] = [
-  { to: '/admin', label: 'Visão geral', icon: 'chart', perm: 'relatorios.visualizar', group: 'Operação' },
+  { to: '/admin', label: 'Visão geral', icon: 'chart', perm: 'relatorios.visualizar', group: 'Operação', short: 'Início' },
   { to: '/admin/agenda', label: 'Agenda', icon: 'calendar', perm: 'agenda.visualizar', group: 'Operação' },
   { to: '/admin/clientes', label: 'Clientes', icon: 'users', perm: 'clientes.visualizar', group: 'Operação' },
   { to: '/admin/pedidos', label: 'Pedidos', icon: 'bag', perm: 'pedidos.visualizar', group: 'Operação' },
@@ -59,7 +59,7 @@ export function AdminApp() {
   if (!page) page = { title: 'Página não encontrada', el: <Empty title="Página não encontrada" />, perm: '' };
   return (
     <RequireStaff>
-      <PanelLayout nav={nav} title={page.title} subtitle={access?.is_owner ? 'Proprietário' : 'Equipe'}>
+      <PanelLayout nav={nav} tabs={['/admin', '/admin/agenda', '/admin/clientes', '/admin/financeiro']} title={page.title} subtitle={access?.is_owner ? 'Proprietário' : 'Equipe'}>
         <RequireStaff perm={page.perm || undefined}>{page.el}</RequireStaff>
       </PanelLayout>
     </RequireStaff>

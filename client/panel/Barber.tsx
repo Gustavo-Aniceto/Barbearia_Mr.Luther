@@ -7,8 +7,8 @@ import { AgendaBoard, EventModal } from './Agenda';
 import { PanelLayout, RequireStaff, NavItem } from './Layout';
 
 const NAV: NavItem[] = [
-  { to: '/barbeiro', label: 'Hoje', icon: 'clock' }, { to: '/barbeiro/agenda', label: 'Minha agenda', icon: 'calendar' },
-  { to: '/barbeiro/disponibilidade', label: 'Disponibilidade', icon: 'settings' }, { to: '/barbeiro/comissoes', label: 'Meus ganhos', icon: 'wallet' },
+  { to: '/barbeiro', label: 'Hoje', icon: 'clock' }, { to: '/barbeiro/agenda', label: 'Minha agenda', icon: 'calendar', short: 'Agenda' },
+  { to: '/barbeiro/disponibilidade', label: 'Disponibilidade', icon: 'settings' }, { to: '/barbeiro/comissoes', label: 'Meus ganhos', icon: 'wallet', short: 'Ganhos' },
   { to: '/barbeiro/historico', label: 'Histórico', icon: 'log' },
 ];
 
@@ -18,7 +18,7 @@ export function BarberApp() {
   const titles: Record<string, string> = { hoje: 'Hoje', agenda: 'Minha agenda', disponibilidade: 'Disponibilidade', comissoes: 'Meus ganhos', historico: 'Histórico de atendimentos' };
   return (
     <RequireStaff barber>
-      <PanelLayout nav={NAV} title={titles[page] || 'Painel'} subtitle="Painel do barbeiro">
+      <PanelLayout nav={NAV} tabs={['/barbeiro', '/barbeiro/agenda', '/barbeiro/comissoes']} title={titles[page] || 'Painel'} subtitle="Painel do barbeiro">
         {page === 'hoje' && <Today />}
         {page === 'agenda' && <AgendaBoard mode="barbeiro" />}
         {page === 'disponibilidade' && <Availability />}
