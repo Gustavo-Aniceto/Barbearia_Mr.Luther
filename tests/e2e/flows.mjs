@@ -285,13 +285,14 @@ await step('barbeiro confirma, recebe o cliente, inicia e finaliza com Pix', asy
     expectTrue(r.status === 200, `${st}: ${r.json?.message}`);
   }
   // finalização pela interface
-  await barber.goto('/barbeiro'); await barber.waitForLoadState('networkidle');
+  await barber.goto('/barbeiro'); await barber.waitForLoadState('networkidle'); await barber.locator('.kpi').first().waitFor({ timeout: 10000 }).catch(() => {});
   const hoje = barber.locator('.next-client').getByRole('button', { name: 'Finalizar atendimento' });
   if (await hoje.count()) await hoje.click();
   else { // atendimento em outro dia: abre pela agenda semanal
     await barber.goto('/barbeiro/agenda'); await barber.getByRole('tab', { name: 'Semana' }).click();
+    await barber.locator('.week-ev').first().waitFor({ timeout: 10000 }).catch(() => {}); // espera a semana carregar
     let ev = barber.locator('.week-ev.st-em_atendimento').first();
-    if (!(await ev.count())) { await barber.getByRole('button', { name: 'Próximo' }).click(); ev = barber.locator('.week-ev.st-em_atendimento').first(); }
+    if (!(await ev.count())) { await barber.getByRole('button', { name: 'Próximo' }).click(); ev = barber.locator('.week-ev.st-em_atendimento').first(); await ev.waitFor({ timeout: 10000 }); }
     await ev.click();
   }
   const dlg = barber.getByRole('dialog'); await dlg.getByLabel('Pagamento recebido agora?').selectOption({ label: 'Pix' });
