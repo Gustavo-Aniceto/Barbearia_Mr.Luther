@@ -181,7 +181,8 @@ await step('cria plano mensal com benefício (1 corte por mês)', async () => {
   await m.locator('input').first().fill('Plano Teste'); await m.locator('.input-affix input').fill('80');
   await m.getByLabel('Periodicidade').selectOption('1');
   await m.getByRole('button', { name: 'Salvar' }).click(); await waitToast(owner, 'Plano salvo');
-  await owner.getByRole('button', { name: 'Adicionar benefício' }).first().click();
+  // o benefício vai no card do "Plano Teste" (a produção já tem os 4 planos reais na lista)
+  await owner.locator('section.card', { has: owner.getByRole('heading', { name: /^Plano Teste ·/ }) }).getByRole('button', { name: 'Adicionar benefício' }).click();
   m = owner.getByRole('dialog');
   await m.getByLabel('Serviço incluído').selectOption({ label: 'Corte (teste)' });
   await m.getByLabel('Quantidade por período').fill('1'); await m.getByLabel('Descrição exibida').fill('1 corte por mês');

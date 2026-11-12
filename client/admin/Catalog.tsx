@@ -286,7 +286,7 @@ export function Plans() {
       <Tabs tabs={[{ id: 'planos', label: 'Planos', count: plans.data?.length }, { id: 'assinaturas', label: 'Assinaturas', count: subs.data?.filter((s: any) => s.status === 'ativa').length }, { id: 'fixos', label: 'Horários fixos' }]} value={tab} onChange={setTab} />
       {tab === 'fixos' ? <><FixedSlotsCard showBarber /><ExpiringPlansCard /></> : tab === 'planos' ? (
         <>
-          <div className="toolbar"><div className="notice" style={{ flex: 1 }}><Icon name="wallet" /><span>Cobrança recorrente automática depende do gateway (Mercado Pago ou Asaas) — veja Configurações › Pagamentos. Até lá, as assinaturas são ativadas ao registrar o pagamento.</span></div>
+          <div className="toolbar"><div className="notice" style={{ flex: 1 }}><Icon name="wallet" /><span>Cobrança recorrente automática usa o Asaas quando o pagamento online está ligado (Configurações › Pagamentos). Com ele desligado, a assinatura é ativada quando você registra o pagamento recebido na barbearia.</span></div>
             {can('planos.criar') && <Button size="sm" onClick={() => setEdit({ active: true, period_months: '1', product_discount_percent: 0, sort_order: 0 })}>Novo plano</Button>}</div>
           {!plans.data?.length ? <section className="card"><Empty title="Nenhum plano criado" text="Crie planos com serviços incluídos, quantidade por período, descontos e regras." /></section> : plans.data.map((p: any) => (
             <section className="card" key={p.id}>
