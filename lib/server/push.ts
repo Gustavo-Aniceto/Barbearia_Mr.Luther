@@ -1,5 +1,5 @@
 import 'server-only';
-import webpush from 'web-push';
+import { generateVAPIDKeys, sendNotification } from 'web-push';
 import type { PoolClient } from 'pg';
 import { asOwner } from './db';
 
@@ -15,7 +15,7 @@ export async function vapidKeys(): Promise<{ publicKey: string; privateKey: stri
   cached = await asOwner(async (c) => {
     const r = await c.query<{ public_key: string; private_key: string }>(`select public_key, private_key from app.push_keys where id = 1`);
     if (r.rows[0]) return { publicKey: r.rows[0].public_key, privateKey: r.rows[0].private_key };
-    const k = webpush.generateVAPIDKeys();
+    const k = generateVAPIDKeys();
     // "on conflict do nothing" + releitura: duas instâncias subindo juntas usam a mesma chave
     await c.query(`insert into app.push_keys (id, public_key, private_key) values (1, $1, $2) on conflict (id) do nothing`, [k.publicKey, k.privateKey]);
     const again = await c.query<{ public_key: string; private_key: string }>(`select public_key, private_key from app.push_keys where id = 1`);
@@ -43,7 +43,7 @@ export async function sendPushToUser(c: PoolClient, userId: string, payload: Pus
   let ok = 0; let lastErr = '';
   for (const s of subs) {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload), {
+      await sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload), {
         TTL: 60 * 60 * 24, urgency: 'high', topic: payload.tag?.slice(0, 32).replace(/[^A-Za-z0-9_-]/g, '') || undefined,
         vapidDetails: { subject: subject(), publicKey: keys.publicKey, privateKey: keys.privateKey },
       });
