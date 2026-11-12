@@ -93,7 +93,7 @@ await step('segurança: inscrição só pela própria conta, e ninguém lê apar
 
 await step('aviso ao cliente entra na fila "app" e é entregue (serviço de push aceitou)', async () => {
   const k = fakeKeys();
-  await db.query(`insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, `https://httpbin.org/status/201?r=${RUN}`, $2, $3)`, [clientId, k.p256dh, k.auth]);
+  await db.query(`insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, $4, $2, $3)`, [clientId, k.p256dh, k.auth, `https://httpbin.org/status/201?r=${RUN}`]);
   await db.query(`select notify_user($1, 'lembrete_atendimento', 'Lembrete: amanhã às 10:00', 'Corte com Barbeiro Push', null)`, [clientId]);
   const q = (await db.query(`select status from notification_logs where user_id = $1 and channel = 'push' order by created_at desc limit 1`, [clientId])).rows[0];
   expect(q && q.status === 'aguardando_integracao', `fila: ${q?.status}`);
@@ -112,7 +112,7 @@ await step('quem não ativou não recebe push (só e-mail e aviso interno)', asy
 
 await step('barbeiro é avisado de novo agendamento e de cancelamento pelo cliente', async () => {
   const k = fakeKeys();
-  await db.query(`insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, `https://httpbin.org/status/201?b=${RUN}`, $2, $3)`, [barberProfile, k.p256dh, k.auth]);
+  await db.query(`insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, $4, $2, $3)`, [barberProfile, k.p256dh, k.auth, `https://httpbin.org/status/201?b=${RUN}`]);
   const svc = (await db.query(`select id from services where active and bookable_online order by duration_minutes limit 1`)).rows[0].id;
   await db.query('insert into barber_services (barber_id, service_id) values ($1, $2) on conflict do nothing', [barberId, svc]);
   // horário livre daqui a 2 dias, como o cliente (permissões do próprio cliente)
@@ -136,7 +136,7 @@ await step('barbeiro é avisado de novo agendamento e de cancelamento pelo clien
 await step('aparelho que não existe mais (410) é removido e o aviso não fica preso', async () => {
   await db.query('delete from push_subscriptions where user_id = $1', [clientId]);
   const k = fakeKeys();
-  await db.query(`insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, `https://httpbin.org/status/410?r=${RUN}`, $2, $3)`, [clientId, k.p256dh, k.auth]);
+  await db.query(`insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, $4, $2, $3)`, [clientId, k.p256dh, k.auth, `https://httpbin.org/status/410?r=${RUN}`]);
   await db.query(`select notify_user($1, 'agendamento_confirmado', 'Confirmado', 'x', null)`, [clientId]);
   await dispatch();
   const left = (await db.query('select count(*)::int n from push_subscriptions where user_id = $1', [clientId])).rows[0].n;
