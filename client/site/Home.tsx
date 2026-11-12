@@ -11,7 +11,10 @@ export function SiteHeader() {
   const { session, access } = useAuth();
   const { count } = useCart();
   const path = usePath();
-  const links = [['/#sobre', 'Sobre nós'], ['/#servicos', 'Serviços'], ['/#profissionais', 'Profissionais'], ['/loja', 'Produtos'], ['/#planos', 'Planos'], ['/#contato', 'Contato']];
+  const { site } = useSite();
+  // Loja e carrinho só aparecem para o cliente quando há produto publicado.
+  const shopOn = !!site?.products.length;
+  const links = [['/#sobre', 'Sobre nós'], ['/#servicos', 'Serviços'], ['/#profissionais', 'Profissionais'], ...(shopOn ? [['/loja', 'Produtos']] : []), ['/#planos', 'Planos'], ['/#contato', 'Contato']];
   const panel = access?.is_staff ? (access.roles.includes('barbeiro') && access.roles.length === 2 && !access.is_owner ? '/barbeiro' : '/admin') : '/conta';
   return (
     <header className="site-header">
@@ -22,7 +25,7 @@ export function SiteHeader() {
           {links.map(([to, label]) => <Link key={to} to={to} aria-current={path === to ? 'page' : undefined} onClick={() => setOpen(false)}>{label}</Link>)}
         </nav>
         <div className="header-actions">
-          <Link to="/carrinho" className="icon-btn" aria-label={`Carrinho, ${count} itens`}><Icon name="bag" />{count > 0 && <span className="cart-count">{count}</span>}</Link>
+          {shopOn && <Link to="/carrinho" className="icon-btn" aria-label={`Carrinho, ${count} itens`}><Icon name="bag" />{count > 0 && <span className="cart-count">{count}</span>}</Link>}
           <Link to={session ? panel : '/entrar'} className="icon-btn" aria-label={session ? 'Minha conta' : 'Entrar'}><Icon name="user" /></Link>
           <Link to="/agendar" className="btn btn-light btn-md hide-sm">Agendar horário</Link>
           <button className="icon-btn menu-toggle" aria-expanded={open} aria-label="Abrir menu" onClick={() => setOpen(!open)}><Icon name={open ? 'x' : 'menu'} /></button>
@@ -51,7 +54,7 @@ export function SiteFooter() {
         </div>
         <div className="footer-nav">
           <h4>Para você</h4>
-          <ul><li><Link to="/agendar">Agendar horário</Link></li><li><Link to="/loja">Produtos</Link></li><li><Link to="/#planos">Planos</Link></li>{s.referral_enabled && <li><Link to="/club">MR.LUDER Club</Link></li>}<li><Link to="/conta">Minha conta</Link></li></ul>
+          <ul><li><Link to="/agendar">Agendar horário</Link></li>{!!site?.products.length && <li><Link to="/loja">Produtos</Link></li>}<li><Link to="/#planos">Planos</Link></li>{s.referral_enabled && <li><Link to="/club">MR.LUDER Club</Link></li>}<li><Link to="/conta">Minha conta</Link></li></ul>
         </div>
         <div className="footer-contact">
           <h4>Contato</h4>

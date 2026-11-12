@@ -187,7 +187,9 @@ export function Shop() {
   const [cat, setCat] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [onlyAvail, setOnlyAvail] = useState(false);
-  if (!site) return <SiteLayout><Loading /></SiteLayout>;
+  // Loja sem produtos publicados: a página não aparece para o cliente (o proprietário cadastra no painel e ela volta sozinha).
+  useEffect(() => { if (site && !site.products.length) navigate('/', true); }, [site]);
+  if (!site || !site.products.length) return <SiteLayout><Loading /></SiteLayout>;
   const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const list = site.products.filter((p) => (!cat || p.category_id === cat) && (!q || norm(p.name + ' ' + (p.description || '')).includes(norm(q))) && (!onlyAvail || p.available));
   return (
@@ -219,6 +221,7 @@ export function Cart() {
   const [coupon, setCoupon] = useState('');
   const [addr, setAddr] = useState({ logradouro: '', numero: '', complemento: '', bairro: '', cidade: 'Guarulhos', cep: '' });
   const [notes, setNotes] = useState('');
+  useEffect(() => { if (site && !site.products.length) navigate('/', true); }, [site]);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   if (!site) return <SiteLayout><Loading /></SiteLayout>;

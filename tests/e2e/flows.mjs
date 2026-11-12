@@ -152,6 +152,16 @@ await step('envia foto do barbeiro para o Neon Object Storage (referência salva
   const meta = await db.query('select bucket, size_bytes from media_files where object_key = $1', [src.replace('/api/media/', '')]);
   expectTrue(meta.rows[0]?.bucket === 'mrluder-media', 'metadados');
 });
+await step('sem produto publicado, loja e carrinho ficam ocultos para o visitante', async () => {
+  const n = (await db.query('select count(*)::int n from products where active')).rows[0].n;
+  if (n > 0) return; // banco de teste já tem produtos: nada a verificar aqui
+  const c = await ctx(); const p = await c.newPage();
+  await p.goto('/'); await p.locator('.site-nav').waitFor();
+  expectTrue(!(await p.locator('.site-nav a', { hasText: 'Produtos' }).count()), 'link Produtos visível');
+  expectTrue(!(await p.locator('a[href="/carrinho"]').count()), 'carrinho visível');
+  await p.goto('/loja'); await p.waitForURL((u) => u.pathname === '/', { timeout: 10000 });
+  await c.close();
+});
 await step('cadastra produto com estoque inicial', async () => {
   if ((await db.query("select 1 from products where sku = 'TST-POMADA'")).rowCount) return;
   await owner.goto('/admin/produtos'); await owner.getByRole('button', { name: 'Novo produto' }).click();

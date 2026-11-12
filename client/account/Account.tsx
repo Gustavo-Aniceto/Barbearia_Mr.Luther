@@ -23,8 +23,14 @@ export function Account() {
   const [hasCoupons, setHasCoupons] = useState(false);
   useEffect(() => { if (session) db.select<any>('coupons', {}, { limit: 1 }).then((r) => setHasCoupons(r.length > 0)).catch(() => {}); }, [session]);
   const clubOn = !!site?.settings.referral_enabled || hasCoupons;
-  const tabs = TABS.filter((t) => t.id !== 'club' || clubOn);
-  useEffect(() => { if (site && tab === 'club' && !clubOn) setTab('agendamentos'); }, [site, tab, clubOn]);
+  // "Pedidos" só aparece quando a loja tem produto publicado ou quando o cliente já fez algum pedido.
+  const [hasOrders, setHasOrders] = useState(false);
+  useEffect(() => { if (session) db.select<any>('orders', {}, { limit: 1 }).then((r) => setHasOrders(r.length > 0)).catch(() => {}); }, [session]);
+  const ordersOn = !!site?.products.length || hasOrders;
+  const tabs = TABS.filter((t) => (t.id !== 'club' || clubOn) && (t.id !== 'pedidos' || ordersOn));
+  useEffect(() => {
+    if (site && ((tab === 'club' && !clubOn) || (tab === 'pedidos' && !ordersOn))) setTab('agendamentos');
+  }, [site, tab, clubOn, ordersOn]);
   if (!session) return <SiteLayout><Loading /></SiteLayout>;
   return (
     <SiteLayout>
