@@ -357,7 +357,7 @@ export function ClubLanding() {
   const s = site?.settings;
   // Programa de indicação desligado pelo proprietário: a página não aparece para o cliente.
   useEffect(() => { if (s && !s.referral_enabled) navigate('/', true); }, [s]);
-  if (s && !s.referral_enabled) return <SiteLayout><Loading /></SiteLayout>;
+  if (!s || !s.referral_enabled) return <SiteLayout><Loading /></SiteLayout>;
   return (
     <SiteLayout>
       <section className="hero"><div className="wrap" style={{ padding: '80px 0' }}>
