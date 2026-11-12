@@ -96,7 +96,10 @@ export function AuthPage({ mode }: { mode: 'entrar' | 'cadastro' | 'recuperar' }
           {stage !== 'form' ? (
             <form onSubmit={submitCode} noValidate>
               <h1>{stage === 'verify' ? 'Confirme seu e-mail' : 'Nova senha'}</h1>
-              <p className="muted">Enviamos um código de 6 dígitos para <strong>{f.email}</strong>. Ele vale por 15 minutos.</p>
+              {stage === 'verify'
+                ? <p className="muted">Enviamos um código de 6 dígitos para <strong>{f.email}</strong>. Ele vale por 15 minutos.</p>
+                : <p className="muted">Se <strong>{f.email}</strong> tiver conta na MR.LUDER, enviamos um código de 6 dígitos. Ele vale por 15 minutos.</p>}
+              <div className="notice"><Icon name="clock" /><span>Não chegou em 2 minutos? Confira o spam e a aba Promoções (o remetente é <strong>auth@mail.myneon.app</strong>).{stage === 'reset' && <> Ainda não tem conta? <Link to="/cadastro">Crie sua conta</Link>, é rápido.</>}</span></div>
               <Field label="Código" required><Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} /></Field>
               {stage === 'reset' && <Field label="Nova senha" required hint="Mínimo de 8 caracteres, com letras e números"><Input type="password" autoComplete="new-password" value={f.password} onChange={(e) => set('password', e.target.value)} /></Field>}
               <Button type="submit" size="lg" loading={busy}>{stage === 'verify' ? 'Confirmar e-mail' : 'Redefinir senha'}</Button>
