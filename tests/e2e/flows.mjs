@@ -213,6 +213,12 @@ await step('cliente contrata o plano (aguardando pagamento)', async () => {
   await client.goto(`/conta?aba=planos&assinar=${planId}`);
   await client.getByRole('button', { name: 'Confirmar contratação' }).click(); await waitToast(client, 'Assinatura registrada');
 });
+await step('Club e cupons ficam ocultos para o cliente enquanto o programa está desligado', async () => {
+  await db.query('update business_settings set referral_enabled = false where id = 1');
+  await client.goto('/conta'); await client.locator('.account-nav button').first().waitFor();
+  expectTrue(!(await client.locator('.account-nav button', { hasText: 'Club e cupons' }).count()), 'aba Club visível com o programa desligado');
+  await db.query('update business_settings set referral_enabled = true where id = 1'); // liga de novo para o teste seguinte
+});
 await step('cliente gera código do MR.LUDER Club', async () => {
   await client.goto('/conta?aba=club'); await client.getByRole('button', { name: 'Gerar meu código' }).click();
   await client.locator('.code-box code').waitFor();

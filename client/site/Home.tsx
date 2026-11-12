@@ -49,7 +49,7 @@ export function SiteFooter() {
         </div>
         <div className="footer-nav">
           <h4>Para você</h4>
-          <ul><li><Link to="/agendar">Agendar horário</Link></li><li><Link to="/loja">Produtos</Link></li><li><Link to="/#planos">Planos</Link></li><li><Link to="/club">MR.LUDER Club</Link></li><li><Link to="/conta">Minha conta</Link></li></ul>
+          <ul><li><Link to="/agendar">Agendar horário</Link></li><li><Link to="/loja">Produtos</Link></li><li><Link to="/#planos">Planos</Link></li>{s.referral_enabled && <li><Link to="/club">MR.LUDER Club</Link></li>}<li><Link to="/conta">Minha conta</Link></li></ul>
         </div>
         <div className="footer-contact">
           <h4>Contato</h4>

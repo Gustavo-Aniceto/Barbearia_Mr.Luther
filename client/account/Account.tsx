@@ -18,6 +18,13 @@ export function Account() {
   const q = useQuery();
   const [tab, setTab] = useState<Tab>((q.get('aba') as Tab) || 'agendamentos');
   useEffect(() => { if (!loading && !session) navigate(`/entrar?voltar=${encodeURIComponent(location.pathname + location.search)}`, true); }, [loading, session]);
+  // "Club e cupons" só aparece quando o proprietário ativa o programa de indicação ou quando o cliente tem algum cupom.
+  const { site } = useSite();
+  const [hasCoupons, setHasCoupons] = useState(false);
+  useEffect(() => { if (session) db.select<any>('coupons', {}, { limit: 1 }).then((r) => setHasCoupons(r.length > 0)).catch(() => {}); }, [session]);
+  const clubOn = !!site?.settings.referral_enabled || hasCoupons;
+  const tabs = TABS.filter((t) => t.id !== 'club' || clubOn);
+  useEffect(() => { if (site && tab === 'club' && !clubOn) setTab('agendamentos'); }, [site, tab, clubOn]);
   if (!session) return <SiteLayout><Loading /></SiteLayout>;
   return (
     <SiteLayout>
@@ -30,7 +37,7 @@ export function Account() {
         </div>
         <div className="account">
           <nav className="account-nav" aria-label="Seções da conta">
-            {TABS.map((t) => <button key={t.id} aria-current={tab === t.id} onClick={() => { setTab(t.id); history.replaceState(null, '', `/conta?aba=${t.id}`); }}><Icon name={t.icon} size={17} />{t.label}</button>)}
+            {tabs.map((t) => <button key={t.id} aria-current={tab === t.id} onClick={() => { setTab(t.id); history.replaceState(null, '', `/conta?aba=${t.id}`); }}><Icon name={t.icon} size={17} />{t.label}</button>)}
           </nav>
           <div>
             {tab === 'agendamentos' && <Appointments />}
