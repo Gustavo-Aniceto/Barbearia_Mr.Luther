@@ -5,6 +5,7 @@ import { Link, money, duration, fmtTime, fmtLongDate, isoDay, addDays, useAuth, 
 import { Button, Icon, Loading, Empty, ErrorBox, Field, Textarea, useToast } from '../lib/ui';
 import { SiteLayout } from './Home';
 import { useSite } from './data';
+import { PushCard } from '../lib/push';
 
 type Slot = { barber_id: string; barber_name: string; starts_at: string };
 const STEPS = ['Serviços', 'Profissional', 'Data e horário', 'Confirmação'];
@@ -107,6 +108,7 @@ export function Booking() {
               {s.whatsapp && <a className="btn btn-line btn-md" target="_blank" rel="noreferrer"
                 href={whatsappLink(s.whatsapp, `Olá! Acabei de agendar pelo site: ${chosen.map((c) => c.name).join(' + ')} em ${fmtLongDate(slot!.starts_at)} às ${fmtTime(slot!.starts_at)}${done.code ? ` (código #${done.code})` : ''}.`)}>Avisar pelo WhatsApp</a>}
             </div>
+            <div style={{ marginTop: 20, textAlign: 'left' }}><PushCard compact /></div>
           </div>
         </div>
       </SiteLayout>

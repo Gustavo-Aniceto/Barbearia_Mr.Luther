@@ -1,9 +1,10 @@
 import 'server-only';
 import type { PoolClient } from 'pg';
 import { getPool } from './db';
+import { sendPushToUser } from './push';
 
 /**
- * Envio das notificações da fila (notification_logs) por e-mail e SMS via Brevo.
+ * Envio das notificações da fila (notification_logs): e-mail e SMS via Brevo e notificação do app (Web Push).
  * Docs: https://developers.brevo.com/reference/send-transac-email
  *       https://developers.brevo.com/reference/send-async-transactional-sms
  *
@@ -17,7 +18,7 @@ const MAX_ATTEMPTS = 5;
 export const emailReady = () => !!(process.env.BREVO_API_KEY && process.env.NOTIFY_EMAIL_FROM);
 export const smsReady = () => !!(process.env.BREVO_API_KEY && process.env.NOTIFY_SMS_SENDER);
 
-type Row = { id: string; user_id: string; event: string; channel: 'email' | 'sms'; title: string; body: string | null; related_id: string | null; attempts: number };
+type Row = { id: string; user_id: string; event: string; channel: 'email' | 'sms' | 'push'; title: string; body: string | null; related_id: string | null; attempts: number };
 type Ctx = {
   profile: { full_name: string; email: string; phone: string | null; anonymized_at: string | null } | undefined;
   biz: { name: string; address: string | null; maps_url: string | null; whatsapp: string | null; timezone: string };
@@ -29,7 +30,7 @@ const APPT_EVENTS = new Set(['agendamento_realizado', 'agendamento_confirmado', 
 const PLAN_EVENTS = new Set(['plano_contratado', 'plano_vencendo']);
 
 export async function dispatchNotifications(limit = 25): Promise<{ sent: number; failed: number; pending: number }> {
-  const channels = [emailReady() && 'email', smsReady() && 'sms'].filter(Boolean) as string[];
+  const channels = [emailReady() && 'email', smsReady() && 'sms', 'push'].filter(Boolean) as string[];
   if (!channels.length) return { sent: 0, failed: 0, pending: 0 };
   const c = await getPool().connect();
   let sent = 0, failed = 0;
@@ -44,7 +45,7 @@ export async function dispatchNotifications(limit = 25): Promise<{ sent: number;
     for (const r of rows) {
       try {
         const ctx = await loadContext(c, r);
-        const id = r.channel === 'email' ? await sendEmail(r, ctx) : await sendSms(r, ctx);
+        const id = r.channel === 'email' ? await sendEmail(r, ctx) : r.channel === 'push' ? await sendPush(c, r, ctx) : await sendSms(r, ctx);
         await c.query(`update notification_logs set status = 'enviada', sent_at = now(), provider_message_id = $2, last_error = null where id = $1`, [r.id, id]);
         sent++;
       } catch (e) {
@@ -62,6 +63,25 @@ export async function dispatchNotifications(limit = 25): Promise<{ sent: number;
 }
 
 class SendError extends Error { constructor(msg: string, public permanent = false) { super(msg); } }
+
+// ---------------------------------------------------------------- notificação do app
+const STAFF_EVENTS = /(_equipe$|^horario_fixo_solicitado$|^novo_agendamento|^pedido_novo)/;
+async function sendPush(c: PoolClient, r: Row, ctx: Ctx): Promise<string> {
+  if (!ctx.profile || ctx.profile.anonymized_at) throw new SendError('Destinatário removido', true);
+  let url = '/conta';
+  if (STAFF_EVENTS.test(r.event)) {
+    const isBarber = (await c.query(`select 1 from barbers where profile_id = $1`, [r.user_id])).rowCount;
+    url = isBarber ? '/barbeiro' : '/admin';
+  } else if (PLAN_EVENTS.has(r.event) || r.event.startsWith('horario_fixo')) url = '/conta?aba=planos';
+  let body = (r.body || '').trim();
+  if (ctx.appt && !body) { const w = when(ctx.appt.starts_at, ctx.biz.timezone); body = `${w.day}, ${w.time} com ${ctx.appt.barber}`; }
+  try {
+    const n = await sendPushToUser(c, r.user_id, { title: r.title, body: body.slice(0, 240), url, tag: r.related_id || r.event });
+    return `push:${n}`;
+  } catch (e) {
+    throw new SendError((e as Error).message, !!(e as { permanent?: boolean }).permanent);
+  }
+}
 
 async function loadContext(c: PoolClient, r: Row): Promise<Ctx> {
   const profile = (await c.query(`select full_name, email, phone, anonymized_at from profiles where id = $1`, [r.user_id])).rows[0];

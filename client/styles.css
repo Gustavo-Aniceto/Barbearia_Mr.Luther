@@ -712,3 +712,15 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .footer-base { padding: 12px 0 18px; font-size: 12px; }
 }
 @media (max-width: 760px) { .site-footer.footer-home-only { display: none; } }
+
+/* ---------------------------------------------------------------- Notificações do app */
+.push-card { display: grid; gap: 14px; }
+.push-card-head { display: flex; gap: 14px; align-items: flex-start; }
+.push-card-head h2 { margin: 0 0 4px; }
+.push-card-head p { margin: 0; }
+.push-ico { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: var(--moss-tint); color: var(--moss-deep); display: grid; place-items: center; }
+.push-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.push-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--moss-deep); font-weight: 600; }
+.push-card > .btn { justify-self: start; }
+@media (max-width: 640px) { .push-card > .btn { justify-self: stretch; } }
+.confirmation .push-card { border: 1px solid var(--line); }
