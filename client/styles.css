@@ -711,3 +711,4 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .footer-contact a, .footer-contact .install-link { font-size: 13px; }
   .footer-base { padding: 12px 0 18px; font-size: 12px; }
 }
+@media (max-width: 760px) { .site-footer.footer-home-only { display: none; } }

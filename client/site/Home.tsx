@@ -36,8 +36,10 @@ export function SiteFooter() {
   const { site } = useSite();
   const s = site?.settings || {};
   const { canInstall } = useInstall();
+  const path = usePath();
+  // No celular (site ou app) o rodapé só aparece na página inicial; nas demais telas ele é ocultado.
   return (
-    <footer className="site-footer">
+    <footer className={`site-footer${path === '/' ? '' : ' footer-home-only'}`}>
       <div className="wrap footer-grid">
         <div className="footer-brand">
           <Logo />
