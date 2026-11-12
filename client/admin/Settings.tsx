@@ -89,10 +89,10 @@ function NotificationSettings({ editable }: { editable: boolean }) {
   const upd = async (n: any, patch: any) => { try { await db.update('notification_settings', { event: n.event }, patch); list.reload(); } catch (e) { toast.error((e as Error).message); } };
   return (
     <section className="card" style={{ display: 'grid', gap: 14 }}>
-      <div className="notice"><Icon name="bell" /><span>Os avisos ao cliente saem por <strong>e-mail</strong> e <strong>SMS</strong> pelo Brevo, com data, horário, profissional, serviços, valor e endereço. Enquanto o Brevo não estiver configurado na Vercel (docs/NOTIFICACOES.md), as mensagens ficam na fila e <strong>não são marcadas como enviadas</strong>; avisos com mais de 48 h na fila expiram. WhatsApp Business ainda não tem integração.{queued.data?.length ? ' Há mensagens aguardando envio.' : ''}{failed.data?.length ? ' Há envios com falha recente: confira o e-mail ou o celular do cliente.' : ''}</span></div>
-      <div className="table-wrap"><table className="table"><thead><tr><th>Evento</th><th>Aviso interno</th><th>E-mail</th><th>SMS</th><th>WhatsApp</th></tr></thead>
+      <div className="notice"><Icon name="bell" /><span>Os avisos saem por <strong>e-mail</strong> (Brevo, com data, horário, profissional, serviços, valor e endereço) e pela <strong>notificação do app</strong>, grátis, para quem ativou as notificações no celular. SMS está desligado (precisa de créditos no Brevo) e WhatsApp Business ainda não tem integração. Mensagens que não saem em 48 h expiram e <strong>nunca são marcadas como enviadas sem envio real</strong>.{queued.data?.length ? ' Há mensagens aguardando envio.' : ''}{failed.data?.length ? ' Há envios com falha recente: confira o e-mail ou o celular do cliente.' : ''}</span></div>
+      <div className="table-wrap"><table className="table"><thead><tr><th>Evento</th><th>Aviso interno</th><th>E-mail</th><th>App (celular)</th></tr></thead>
         <tbody>{(list.data || []).map((n: any) => <tr key={n.event}><td className="cell-strong">{n.label}</td>
-          {(['internal_enabled', 'email_enabled', 'sms_enabled', 'whatsapp_enabled'] as const).map((k) => <td key={k}><input type="checkbox" aria-label={`${n.label} ${k}`} checked={n[k]} disabled={!editable} onChange={(e) => upd(n, { [k]: e.target.checked })} style={{ accentColor: 'var(--moss)', width: 17, height: 17 }} /></td>)}</tr>)}</tbody></table></div>
+          {(['internal_enabled', 'email_enabled', 'push_enabled'] as const).map((k) => <td key={k}><input type="checkbox" aria-label={`${n.label} ${k}`} checked={n[k]} disabled={!editable} onChange={(e) => upd(n, { [k]: e.target.checked })} style={{ accentColor: 'var(--moss)', width: 17, height: 17 }} /></td>)}</tr>)}</tbody></table></div>
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { Badge, Button, Empty, ErrorBox, Field, Input, Loading, Modal, Select, T
 import { AgendaBoard, EventModal } from './Agenda';
 import { PanelLayout, RequireStaff, NavItem } from './Layout';
 import { ExpiringPlansCard, FixedSlotsCard } from './FixedSlots';
+import { PushCard } from '../lib/push';
 
 const NAV: NavItem[] = [
   { to: '/barbeiro', label: 'Hoje', icon: 'clock' }, { to: '/barbeiro/agenda', label: 'Minha agenda', icon: 'calendar', short: 'Agenda' },
@@ -50,6 +51,7 @@ function Today() {
   const m = metrics.data;
   return (
     <>
+      <PushCard audience="equipe" compact />
       <div className="grid-2">
         {next ? (
           <section className="next-client" aria-label="Próximo atendimento">

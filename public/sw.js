@@ -3,8 +3,9 @@
  * - Arquivos estáticos (JS/CSS do build, ícones e fotos): guardados no aparelho para abrir rápido.
  * - Páginas: sempre buscadas na internet; sem conexão, mostra a tela "sem internet".
  * - API, login e pagamentos: nunca passam por cache (dados pessoais e sempre atuais).
+ * - Notificações do app (Web Push): mostra o aviso e, ao tocar, abre a tela certa.
  */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC = `mrluder-static-${VERSION}`;
 const PAGES = `mrluder-pages-${VERSION}`;
 const OFFLINE = '/offline.html';
@@ -50,4 +51,32 @@ self.addEventListener('fetch', (event) => {
       }),
     );
   }
+});
+
+// ---------------------------------------------------------------- notificações do app
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data && event.data.text() }; }
+  const title = data.title || 'MR.LUDER Barbearia';
+  event.waitUntil(self.registration.showNotification(title, {
+    body: data.body || '',
+    icon: '/app/icon-192.png',
+    badge: '/app/icon-192.png',
+    tag: data.tag || undefined,
+    renotify: !!data.tag,
+    data: { url: data.url || '/conta' },
+    lang: 'pt-BR',
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const w of wins) {
+      if (new URL(w.url).origin === self.location.origin) { await w.focus(); return w.navigate(target); }
+    }
+    return self.clients.openWindow(target);
+  })());
 });

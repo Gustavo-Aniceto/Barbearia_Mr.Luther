@@ -4,6 +4,7 @@ import { db } from '../lib/api';
 import { APPT_STATUS, ORDER_STATUS, SUB_STATUS, WEEKDAYS, Link, money, fmtDate, fmtTime, fmtDateTime, fmtLongDate, isoDay, addDays, useAuth, useLoad, useQuery, navigate } from '../lib/core';
 import { Badge, Button, Empty, ErrorBox, Field, Icon, Input, Loading, Modal, Select, Stars, Textarea, Toggle, useConfirm, useToast } from '../lib/ui';
 import { SiteLayout } from '../site/Home';
+import { PushCard } from '../lib/push';
 import { useSite } from '../site/data';
 
 type Tab = 'agendamentos' | 'pedidos' | 'planos' | 'club' | 'avisos' | 'dados' | 'privacidade';
@@ -415,11 +416,14 @@ function Notifications() {
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={reload} />;
   return (
+    <>
+    <PushCard />
     <section className="panel"><h2>Avisos</h2>
       {data!.length === 0 ? <Empty title="Nenhum aviso" text="Confirmações, lembretes e recompensas aparecem aqui." /> : (
         <ul className="list-plain">{data!.map((n: any) => <li key={n.id}><span><strong>{n.title}</strong><br /><span className="muted">{n.body}</span></span><span className="cell-sub">{fmtDateTime(n.created_at)}{n.status === 'registrada' && <> · <Badge tone="info">Novo</Badge></>}</span></li>)}</ul>
       )}
     </section>
+    </>
   );
 }
 
