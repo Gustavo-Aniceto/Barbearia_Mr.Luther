@@ -39,19 +39,19 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="wrap footer-grid">
-        <div>
+        <div className="footer-brand">
           <Logo />
           <p>{s.address}</p>
         </div>
-        <div>
+        <div className="footer-nav">
           <h4>A barbearia</h4>
           <ul><li><Link to="/#sobre">Sobre nós</Link></li><li><Link to="/#servicos">Serviços</Link></li><li><Link to="/#profissionais">Profissionais</Link></li><li><Link to="/#galeria">Galeria</Link></li></ul>
         </div>
-        <div>
+        <div className="footer-nav">
           <h4>Para você</h4>
           <ul><li><Link to="/agendar">Agendar horário</Link></li><li><Link to="/loja">Produtos</Link></li><li><Link to="/#planos">Planos</Link></li><li><Link to="/club">MR.LUDER Club</Link></li><li><Link to="/conta">Minha conta</Link></li></ul>
         </div>
-        <div>
+        <div className="footer-contact">
           <h4>Contato</h4>
           <ul>
             {s.whatsapp && <li><a href={whatsappLink(s.whatsapp)} target="_blank" rel="noreferrer">WhatsApp {s.phone}</a></li>}

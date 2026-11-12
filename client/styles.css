@@ -698,3 +698,16 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .slot-requests-actions .btn { flex: 1; }
   .fixed-slot-actions .btn { flex: 1; }
 }
+
+/* ---------------------------------------------------------------- Rodapé compacto no celular
+   Os links de "A barbearia" e "Para você" já estão no menu; no celular o rodapé fica só com
+   logo, endereço e uma linha de contatos, para não ocupar uma tela inteira. */
+@media (max-width: 760px) {
+  .footer-grid { grid-template-columns: 1fr; gap: 14px; padding: 28px 0 10px; }
+  .footer-nav, .footer-contact h4 { display: none; }
+  .footer-grid .logo { height: 44px; margin-bottom: 8px; }
+  .footer-brand p { margin: 0; font-size: 13px; line-height: 1.5; }
+  .footer-contact ul { display: flex; flex-wrap: wrap; column-gap: 18px; row-gap: 0; }
+  .footer-contact a, .footer-contact .install-link { font-size: 13px; }
+  .footer-base { padding: 12px 0 18px; font-size: 12px; }
+}
