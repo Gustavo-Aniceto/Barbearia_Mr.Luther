@@ -107,7 +107,7 @@ export function PushCard({ audience = 'cliente', compact = false }: { audience?:
       {state === 'off' && (
         <Button size="lg" loading={busy} onClick={async () => {
           setBusy(true);
-          try { if (await enable()) toast.ok('Notificações ativadas'); } catch (e) { toast.error((e as Error).message || 'Não foi possível ativar agora'); } finally { setBusy(false); }
+          try { if (await enable()) toast.ok('Notificações ativadas'); } catch { toast.error('Não foi possível ativar as notificações neste navegador. Tente pelo app instalado ou pelo Chrome.'); } finally { setBusy(false); }
         }}><Icon name="bell" size={18} /> Ativar notificações</Button>
       )}
       {state === 'ios-install' && (

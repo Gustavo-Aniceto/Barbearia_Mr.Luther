@@ -54,7 +54,9 @@ await step('chave pública do app disponível (privada nunca sai do servidor)', 
 });
 
 await step('na conta, o cliente vê "Ativar notificações" e o aparelho é inscrito ao tocar', async () => {
-  const c = await browser.newContext({ baseURL: BASE, viewport: { width: 390, height: 844 } });
+  // Chromium "completo" em modo sem tela: concede a permissão (o modo enxuto padrão nega notificações)
+  const full = await chromium.launch({ channel: 'chromium' });
+  const c = await full.newContext({ baseURL: BASE, viewport: { width: 390, height: 844 } });
   await c.grantPermissions(['notifications'], { origin: BASE });
   const p = await c.newPage();
   await p.goto('/entrar'); await p.locator('input[type=email]').fill(U.client.email); await p.locator('input[type=password]').fill(PASS);
@@ -70,10 +72,12 @@ await step('na conta, o cliente vê "Ativar notificações" e o aparelho é insc
     console.log('     (inscrição real no serviço de push do navegador)');
     await db.query('delete from push_subscriptions where user_id = $1', [clientId]); // segue com o simulador
   } else {
-    const err = await p.locator('.toast, [role=status], [role=alert]').allTextContents();
-    console.log('     (navegador de teste sem serviço de push; tela mostrou:', err.join(' | ').slice(0, 120) || '—', ')');
+    // Sem acesso ao serviço de push do Google (normal em servidor de teste): a tela precisa explicar, sem travar.
+    await p.getByText('Não foi possível ativar as notificações neste navegador').waitFor({ timeout: 5000 });
+    expect(await p.getByRole('button', { name: 'Ativar notificações' }).isVisible(), 'botão sumiu após a falha');
+    console.log('     (servidor de teste sem serviço de push do Google: a tela avisou com clareza)');
   }
-  await c.close();
+  await c.close(); await full.close();
 });
 
 await step('segurança: inscrição só pela própria conta, e ninguém lê aparelhos de outros', async () => {
